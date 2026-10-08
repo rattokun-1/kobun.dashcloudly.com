@@ -570,6 +570,12 @@ const RANKINGS_COLLECTION = 'rankingsKobun';
 const WORD_MAP = {};
 WORDS.forEach(w => WORD_MAP[w.id] = w);
 
+function getWordPhonetic(word) {
+  if (!word) return '';
+  const phonetic = word.phonetic || word.kana || '';
+  return typeof phonetic === 'string' ? phonetic.trim() : '';
+}
+
 const SET_SIZE = 50;
 const WRONG_THRESHOLD = 10;
 const TOTAL_SETS = Math.ceil(WORDS.length / SET_SIZE);
@@ -3268,7 +3274,10 @@ function isTypedAnswerCorrect(input, correct) {
   const b = normalizeTypedAnswer(correct);
   if (!a) return false;
   if (a === b) return true;
-  return normalizeTypedAnswerStrict(a) === normalizeTypedAnswerStrict(b);
+  const strictA = normalizeTypedAnswerStrict(a);
+  const strictB = normalizeTypedAnswerStrict(b);
+  if (!strictA || !strictB) return false;
+  return strictA === strictB;
 }
 
 function gradeTypedAnswer() {
