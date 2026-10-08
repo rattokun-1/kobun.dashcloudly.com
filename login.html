@@ -77,6 +77,12 @@
     </section>
     <footer class="google-login-footer">DashCloudly 学習ID</footer>
   </main>
+  <div id="login-busy-overlay" class="login-busy-overlay" hidden aria-live="polite" aria-busy="true">
+    <div class="login-busy-panel">
+      <span class="login-busy-spinner" aria-hidden="true"></span>
+      <p id="login-busy-text">ログイン中…</p>
+    </div>
+  </div>
 
   <script>
     const firebaseConfig = {
@@ -109,7 +115,26 @@
       if (id === 'password-step') $('password-input').focus();
       if (id === 'email-step') $('email-input').focus();
     };
-    const finish = () => location.replace(returnPaths[requestedReturn] || returnPaths.account);
+    let redirecting = false;
+    const busyOverlay = $('login-busy-overlay');
+    const busyText = $('login-busy-text');
+    const showBusyOverlay = (text) => {
+      if (text) busyText.textContent = text;
+      busyOverlay.hidden = false;
+      document.body.classList.add('login-busy-active');
+    };
+    const hideBusyOverlay = () => {
+      busyOverlay.hidden = true;
+      document.body.classList.remove('login-busy-active');
+    };
+    const finish = () => {
+      if (redirecting) return;
+      redirecting = true;
+      showBusyOverlay('準備中…');
+      requestAnimationFrame(() => {
+        setTimeout(() => location.replace(returnPaths[requestedReturn] || returnPaths.account), 120);
+      });
+    };
     const normalizeCode = value => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 20);
     function authMessage(error) {
       const messages = {
@@ -126,12 +151,19 @@
       };
       return messages[error?.code] || '続行できませんでした。入力内容を確認して、もう一度お試しください。';
     }
-    async function withBusy(button, task) {
+    async function withBusy(button, task, options = {}) {
+      const statusText = options.statusText || '確認しています…';
+      const busyOverlayText = options.busyOverlayText || 'ログイン中…';
+      const useBusyOverlay = options.useBusyOverlay === true;
       if (button) button.disabled = true;
-      showMessage('確認しています…');
+      showMessage(statusText);
+      if (useBusyOverlay) showBusyOverlay(busyOverlayText);
       try { await task(); }
       catch (error) { console.warn('Sign-in step failed:', error); showMessage(authMessage(error), true); }
-      finally { if (button) button.disabled = false; }
+      finally {
+        if (button) button.disabled = false;
+        if (useBusyOverlay && !redirecting) hideBusyOverlay();
+      }
     }
     function getSchoolSession() {
       if (schoolSession) return schoolSession;
@@ -177,7 +209,7 @@
         }
         await attachSchoolToCurrentUser();
         finish();
-      });
+      }, { useBusyOverlay: true, busyOverlayText: 'ログイン中…', statusText: 'ログイン中…' });
     }
     document.querySelectorAll('[data-google-login]').forEach(button => button.addEventListener('click', signInGoogle));
 
@@ -236,7 +268,7 @@
         }
         await attachSchoolToCurrentUser();
         finish();
-      });
+      }, { useBusyOverlay: true, busyOverlayText: createAccount ? 'アカウントを作成中…' : 'ログイン中…', statusText: createAccount ? 'アカウントを作成中…' : 'ログイン中…' });
     }
     $('password-form').addEventListener('submit', event => { event.preventDefault(); emailCredential(false); });
     $('signup-button').addEventListener('click', () => emailCredential(true));
