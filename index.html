@@ -1,0 +1,485 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>古文単語マスター</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/main.css?v=2.0">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c9a227">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="古文単語マスター">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="assets/icons/icon.png">
+<meta name="app-version" content="2026.09.25-v1.7">
+
+
+</head>
+<body>
+<div id="app">
+  <div class="loading" id="loading-screen">読み込み中...</div>
+
+  <div class="screen" id="screen-home">
+    <div class="header">
+      <div>
+        <div class="header-title">古文単語マスター</div>
+        <div class="header-sub">読んで見て覚える 重要古文単語315 全339語</div>
+      </div>
+    </div>    <div class="content">
+      <div id="home-class-study"></div>
+      <div id="home-pwa-invite"></div>
+      <button type="button" class="review-entry" onclick="showBookmarks()" hidden>☆ 復習リストを開く <span>ブックマーク・間違えた単語 →</span></button>
+      <div id="home-ranking-panel"></div>
+      <div id="home-bookmark-panel"></div>
+      <div id="home-alert"></div>
+      <div class="home-stats" id="home-stats"></div>
+      <div class="home-word-search-panel" id="home-word-search-panel" role="search">
+        <div class="home-word-search-head">
+          <div>
+            <div class="home-word-search-title">単語検索</div>
+            <div class="home-word-search-sub">全339語から古文単語・現代語訳・番号で検索できます</div>
+          </div>
+          <span id="home-word-search-count" class="home-word-search-count">0語</span>
+        </div>
+        <div class="home-word-search-box">
+          <span class="home-word-search-icon">🔎</span>
+          <input id="home-word-search-input" type="search" placeholder="例：をかし / 趣がある / 55" autocomplete="off">
+          <button type="button" id="home-word-search-clear">クリア</button>
+        </div>
+        <div id="home-word-search-results" class="home-word-search-results" aria-live="polite"></div>
+      </div>
+      <div class="section-title">学習する単語</div>
+      <div class="sets-grid" id="sets-grid"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-search">
+    <div class="header"><div><div class="header-title">単語検索</div><div class="header-sub">古文単語・現代語訳・番号で検索</div></div></div>
+    <div class="content"><div id="search-panel-slot"></div></div>
+  </div>
+  <div class="screen" id="screen-progress">
+    <div class="header"><div><div class="header-title">学習の進捗</div><div class="header-sub">今の正誤と習得状況</div></div></div>
+    <div class="content"><div id="progress-panel-slot"></div><div id="progress-ranking-slot"></div></div>
+  </div>
+  <div class="screen" id="screen-results-dashboard">
+    <div class="header"><div><div class="header-title">成績</div><div class="header-sub">進捗とランキング</div></div></div>
+    <div class="content"><div id="results-stats-slot"></div><div id="results-ranking-panel-slot"></div><div id="results-leaderboard-slot"></div></div>
+  </div>
+
+  <div class="screen" id="screen-notifications">
+    <div class="header"><div><div class="header-title">通知</div><div class="header-sub">学校からのお知らせと学習リマインド</div></div></div>
+    <div class="content">
+      <div class="notice-settings-card">
+        <strong>通知の設定</strong><p id="notice-push-status">読み込み中...</p>
+        <div class="notice-settings-actions"><button type="button" class="btn btn-primary" onclick="enableInstalledPushNotifications()">プッシュ通知を有効化</button>
+        <button type="button" class="btn btn-secondary" onclick="disableInstalledPushNotifications()">停止</button></div>
+        <p>アプリ内の通知一覧はプッシュ通知を許可しなくても確認できます。</p>
+      </div>
+      <div class="notice-inbox-head"><h2>学校からの通知</h2><button type="button" class="btn btn-secondary" onclick="markAllSchoolNoticesRead()">すべて既読にする</button></div>
+      <div id="notice-inbox-list" class="notice-inbox-list" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-ranking">
+    <div class="header">
+      <button class="back-btn" onclick="showHome()">← ホーム</button>
+      <div>
+        <div class="header-title">ランキング</div>
+        <div class="header-sub">習得数と累計成績で順位を表示</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="ranking-layout">
+        <div class="ranking-card">
+          <div class="ranking-meta-title">Leaderboard</div>
+          <div id="ranking-list" class="ranking-list"></div>
+        </div>
+        <div class="ranking-side-grid">
+          <div class="ranking-card">
+            <div class="ranking-meta-title">あなたの成績</div>
+            <div id="ranking-my-summary"></div>
+          </div>
+          <div class="ranking-card">
+            <div class="ranking-meta-title">集計ルール</div>
+            <div class="ranking-note">
+              順位はまず <strong>◎ の語数</strong>、次に <strong>累計正解数</strong>、最後に <strong>正答率</strong> で並びます。<br>
+              ログイン中のみ自分の記録をランキングへ反映します。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="screen" id="screen-account">
+    <div class="header">
+      <button class="back-btn" onclick="showHome()">← ホーム</button>
+      <div>
+        <div class="header-title">アカウント設定</div>
+        <div class="header-sub">ニックネーム・ログイン・ランキング表示を管理</div>
+      </div>
+    </div>
+    <div class="content">
+      <div id="account-settings-body"></div>
+    </div>
+  </div>
+
+
+  <div class="screen" id="screen-set">
+    <div class="header">
+      <button class="back-btn" onclick="showHome()">← ホーム</button>
+      <div>
+        <div class="header-title" id="set-screen-title">-</div>
+        <div class="header-sub" id="set-screen-sub">-</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="quiz-options">
+        <div class="quiz-settings-card">
+          <div class="settings-row settings-row-mode">
+            <label class="settings-label" for="mode-select">
+              <span class="settings-label-main">出題項目</span>
+              <span class="settings-label-sub">問題形式</span>
+            </label>
+            <div class="select-wrap">
+              <select id="mode-select" class="settings-select" onchange="selectMode(Number(this.value))">
+                <option value="1">① 古文単語 → 現代語訳（6択）</option>
+                <option value="2">② 現代語訳 → 古文単語（6択）</option>
+                <option value="3">③ 現代語訳 → 古文単語（記述）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-row settings-row-retest">
+            <label class="settings-label" for="retest-select">
+              <span class="settings-label-main">出題対象</span>
+              <span class="settings-label-sub">出題する単語の状態</span>
+            </label>
+            <div class="select-wrap">
+              <select id="retest-select" class="settings-select" onchange="selectRetest(this.value)">
+                <option value="all">すべて（未回答、○、×）</option>
+                <option value="mix">○、×</option>
+                <option value="circle">○</option>
+                <option value="cross">×</option>
+                <option value="bookmark">選択範囲のブックマーク</option>
+              </select>
+            </div>
+          </div>
+          <div class="mobile-study-choices" aria-label="出題項目">
+            <span>出題項目</span>
+            <div class="mobile-choice-grid"><button type="button" data-mode="1" onclick="chooseMobileMode(1)">古文単語 → 現代語訳<small>6択</small></button><button type="button" data-mode="2" onclick="chooseMobileMode(2)">現代語訳 → 古文単語<small>6択</small></button><button type="button" data-mode="3" onclick="chooseMobileMode(3)">現代語訳 → 古文単語<small>記述</small></button></div>
+            <span>出題対象</span>
+            <div class="mobile-choice-grid target-grid"><button type="button" data-retest="all" onclick="chooseMobileRetest('all')">すべて</button><button type="button" data-retest="mix" onclick="chooseMobileRetest('mix')">回答済み</button><button type="button" data-retest="circle" onclick="chooseMobileRetest('circle')">正解</button><button type="button" data-retest="cross" onclick="chooseMobileRetest('cross')">間違い</button><button type="button" data-retest="bookmark" onclick="chooseMobileRetest('bookmark')">☆ 保存済み</button></div>
+          </div>
+
+          <div class="range-compact-panel">
+            <div class="range-compact-head">
+              <div>
+                <div class="settings-label-main">単語範囲</div>
+                <div class="settings-label-sub" id="quiz-range-help">全単語から番号で選択できます</div>
+              </div>
+              <div class="range-summary-chip" id="quiz-range-summary">1〜50番</div>
+            </div>
+
+            <div class="range-stepper-grid">
+              <div class="stepper-group">
+                <span class="stepper-label">開始</span>
+                <button type="button" class="stepper-btn" onclick="incrementSetRangeBound('start', -1)" aria-label="開始番号を1つ下げる">−</button>
+                <input type="number" min="1" step="1" id="quiz-range-start-input" class="stepper-input" onkeydown="if(event.key==='Enter'){event.preventDefault();commitSetRangeInput();this.blur()}" value="1" oninput="handleSetRangeInput()">
+                <button type="button" class="stepper-btn" onclick="incrementSetRangeBound('start', 1)" aria-label="開始番号を1つ上げる">＋</button>
+              </div>
+              <div class="stepper-separator">〜</div>
+              <div class="stepper-group">
+                <span class="stepper-label">終了</span>
+                <button type="button" class="stepper-btn" onclick="incrementSetRangeBound('end', -1)" aria-label="終了番号を1つ下げる">−</button>
+                <input type="number" min="1" step="1" id="quiz-range-end-input" class="stepper-input" onkeydown="if(event.key==='Enter'){event.preventDefault();commitSetRangeInput();this.blur()}" value="50" oninput="handleSetRangeInput()">
+                <button type="button" class="stepper-btn" onclick="incrementSetRangeBound('end', 1)" aria-label="終了番号を1つ上げる">＋</button>
+              </div>
+            </div>
+
+            <p id="quiz-range-error" class="range-error" role="alert" hidden></p>
+            <button type="button" class="btn btn-apply-range" onclick="commitSetRangeInput()">この範囲を表示</button>
+            <details class="range-presets-details">
+              <summary>よく使う範囲から選ぶ</summary>
+              <div class="range-presets" id="quiz-range-presets"></div>
+            </details>
+          </div>
+
+          <div class="action-btns action-btns-sticky">
+            <button class="btn btn-share-selection" type="button" onclick="shareWordSelection()">🔗 選択を共有</button>
+            <button class="btn btn-primary" id="btn-start-quiz" onclick="startNormalQuiz()">
+              ▶ クイズ開始
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section-title">単語リスト</div>
+      <div class="word-table-wrap">
+        <div class="word-table-header">
+          <span></span><span>No.</span><span>古文単語</span><span>意味</span><span>進捗 / ①②③</span>
+        </div>
+        <div class="word-table-scroll" id="word-table-body"></div>
+      </div>
+    </div>
+  </div>
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-header quiz-ui-v2-header">
+      <div class="quiz-header-left" style="display:flex;align-items:center;gap:12px;">
+        <button class="back-btn" onclick="quitQuiz()">中断</button>
+        <span class="quiz-type-tag type-normal" id="quiz-type-tag">通常クイズ</span>
+        <span class="quiz-mode-tag" id="quiz-mode-tag">① 古文単語→現代語訳</span>
+      </div>
+      <div class="quiz-header-right" style="text-align:right;">
+        <div class="quiz-progress-label">進捗</div>
+        <div class="quiz-progress-text" id="quiz-progress-text">1 / 10</div>
+      </div>
+    </div>
+    <div class="quiz-progress-bar">
+      <div class="quiz-progress-fill" id="quiz-progress-fill" style="width:0%"></div>
+    </div>
+    <div class="quiz-content">
+      <div class="question-card" style="position:relative;">
+        <div class="quiz-action-row" aria-label="単語操作">
+          <button class="quiz-bm-btn" id="quiz-bm-btn" onclick="toggleQuizBookmark()" title="ブックマーク">☆</button>
+          <button class="quiz-voice-btn" id="quiz-voice-btn" onclick="speakCurrentQuizWord()" title="古文単語を聞く">🔊</button>
+        </div>
+        <div class="result-overlay correct-flash" id="correct-flash">✓</div>
+        <div class="result-overlay wrong-flash" id="wrong-flash">✗</div>
+        <div class="question-prompt" id="q-prompt">-</div>
+        <div id="q-word" class="question-word" style="display:none"></div>
+        <div id="q-phonetic" class="question-phonetic" style="display:none"></div>
+        <div id="q-meaning" class="question-meaning" style="display:none"></div>
+        <div class="question-sub" id="q-sub"></div>
+        <div id="choices-container"></div>
+        <div id="answer-reveal-area" style="display:none">
+          <div class="answer-user" id="answer-user-box" style="display:none">
+            <div class="answer-user-label">あなたの入力</div>
+            <div class="answer-user-text" id="answer-user-text"></div>
+          </div>
+          <div class="answer-reveal">
+            <div class="answer-reveal-label">正解の古文単語</div>
+            <div class="answer-reveal-text" id="answer-reveal-text"></div>
+          </div>
+          <div class="answer-auto-judge" id="answer-auto-judge" style="display:none"></div>
+          <div class="judge-3btns" id="manual-judge-buttons" style="display:none">
+            <button class="judge-dcircle" onclick="selfJudge('dcircle')">◎ 完璧</button>
+            <button class="judge-circle" onclick="selfJudge('circle')">○ 正解</button>
+            <button class="judge-cross-btn" onclick="selfJudge('cross')">× 不正解</button>
+          </div>
+        </div>
+        <div class="quiz-bottom-actions"><button type="button" class="unknown-btn" id="btn-unknown" onclick="skipUnknownQuestion()">わからない</button><button type="button" class="grade-mobile-btn" id="btn-grade-mobile" onclick="gradeTypedAnswer()" hidden>採点する</button><button class="next-btn" id="next-btn" onclick="nextQuestion()">次の問題へ →</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="screen" id="screen-result">
+    <div class="header">
+      <div class="header-title">結果</div>
+    </div>
+    <div class="content">
+      <div class="result-card" id="result-card">
+        <div class="result-title" id="result-title">クイズ完了！</div>
+        <div class="result-sub" id="result-sub"></div>
+        <div class="result-stats" id="result-stats"></div>
+        <div class="result-btn-group" id="result-btns"></div>
+      </div>
+    </div>
+  </div>
+  <div class="screen" id="screen-bookmark">
+    <div class="header">
+      <button class="back-btn" onclick="showHome()">← ホーム</button>
+      <div>
+        <div class="header-title" id="bm-screen-title">マイリスト</div>
+        <div class="header-sub" id="bm-screen-sub">0語</div>
+      </div>
+    </div>
+    <div class="content">
+
+      <div class="bm-filter-bar">
+        <button class="bm-filter-btn active-all" id="bm-filter-all"   onclick="setBmFilter('all')">
+          すべて <span class="bm-filter-count" id="bm-cnt-all">0</span>
+        </button>
+        <button class="bm-filter-btn" id="bm-filter-bm"    onclick="setBmFilter('bm')">
+          ★ ブックマーク <span class="bm-filter-count" id="bm-cnt-bm">0</span>
+        </button>
+        <button class="bm-filter-btn" id="bm-filter-wrong" onclick="setBmFilter('wrong')">
+          × 間違い <span class="bm-filter-count" id="bm-cnt-wrong">0</span>
+        </button>
+      </div>
+
+      <div class="quiz-options">
+        <div class="quiz-settings-card">
+          <div class="settings-row settings-row-mode">
+            <label class="settings-label" for="bm-mode-select">
+              <span class="settings-label-main">出題項目</span>
+              <span class="settings-label-sub">問題形式</span>
+            </label>
+            <div class="select-wrap">
+              <select id="bm-mode-select" class="settings-select" onchange="selectBmMode(Number(this.value))">
+                <option value="1">① 古文単語 → 現代語訳（6択）</option>
+                <option value="2">② 現代語訳 → 古文単語（6択）</option>
+                <option value="3">③ 現代語訳 → 古文単語（記述）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label" for="bm-quiz-count-input">
+              <span class="settings-label-main">出題数</span>
+              <span class="settings-label-sub" id="bm-quiz-count-help">表示中の単語数まで指定できます</span>
+            </label>
+            <div class="count-stepper">
+              <button type="button" class="stepper-btn" onclick="incrementQuizCount('bookmark', -1)" aria-label="出題数を1つ減らす">−</button>
+              <input type="number" min="1" step="1" id="bm-quiz-count-input" class="stepper-input" value="10" oninput="handleQuizCountInput('bookmark')">
+              <button type="button" class="stepper-btn" onclick="incrementQuizCount('bookmark', 1)" aria-label="出題数を1つ増やす">＋</button>
+              <span class="quiz-count-suffix">問</span>
+            </div>
+          </div>
+
+          <div class="action-btns action-btns-sticky">
+            <button class="btn" id="btn-bm-quiz" onclick="startBookmarkQuiz()">
+              ▶ 表示中の単語でクイズ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="bm-word-list"></div>
+
+    </div>
+  </div>
+
+  <div class="auth-fab" id="auth-fab"></div>
+  <div class="sync-status" id="sync-status"></div>
+
+
+  <div class="offline-toast" id="offline-toast" role="status" aria-live="polite">
+    <span class="offline-toast-dot"></span>
+    <span id="offline-toast-text">オフラインで利用中です</span>
+  </div>
+
+  <div class="welcome-modal-backdrop" id="welcome-modal" aria-hidden="true">
+    <div class="welcome-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <div class="welcome-badge">初回確認</div>
+      <h2 id="welcome-title">利用前にご確認ください</h2>
+      <p class="welcome-lead">
+        古文単語マスターは学習補助ツールです。学習データはこの端末に保存され、ログインするとランキング参加や進捗の同期が使えます。
+      </p>
+      <ul class="welcome-terms">
+        <li>学習目的の範囲で利用してください。</li>
+        <li>正確性には注意していますが、内容は必要に応じて書籍等で確認してください。</li>
+        <li>ログインなしでも基本機能は利用できます。</li>
+      </ul>
+      <div class="welcome-actions">
+        <button type="button" class="welcome-login-btn" onclick="acceptWelcomeAndOpenLogin()">同意してログイン方法を選ぶ</button>
+      </div>
+      <p class="welcome-note">ログインせずに利用する選択肢も次の画面にあります。</p>
+    </div>
+  </div>
+  <div class="onboarding-backdrop" id="onboarding-modal" aria-hidden="true">
+    <div class="onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <div class="onboarding-progress" id="onboarding-progress" aria-label="初回設定の進捗"></div>
+      <div class="welcome-badge" id="onboarding-step-label">はじめに</div>
+      <h2 id="onboarding-title"></h2>
+      <p id="onboarding-description"></p>
+      <div id="onboarding-extra"></div>
+      <div class="onboarding-actions" id="onboarding-actions"></div>
+    </div>
+  </div>
+  <div class="auth-choice-backdrop" id="auth-choice-modal" aria-hidden="true">
+    <div class="auth-choice-modal" role="dialog" aria-modal="true" aria-labelledby="auth-choice-title">
+      <button type="button" class="auth-choice-close" onclick="closeAuthModal()" aria-label="閉じる">×</button>
+      <div class="welcome-badge">LOGIN</div>
+      <h2 id="auth-choice-title">ログイン方法を選択</h2>
+      <p class="auth-choice-lead">ログインするとランキング参加・学習データ同期が使えます。ログインなしでも単語テストは利用できます。</p>
+
+      <button type="button" class="auth-google-btn" onclick="loginGoogle()">Googleでログイン</button>
+      <div class="auth-divider"><span>または学校・クラスでログイン</span></div>
+      <div class="school-class-login">
+        <label for="auth-school-id">学校ID</label>
+        <input id="auth-school-id" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="学校から配布されたID">
+        <label for="auth-class-id">クラスID（任意）</label>
+        <input id="auth-class-id" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="学校IDのみでもログインできます" onkeydown="if(event.key==='Enter')loginSchoolClass()">
+        <button id="auth-school-login" type="button" class="btn btn-primary" onclick="loginSchoolClass()">学校IDでログイン</button>
+        <div id="auth-school-message" class="school-login-message" role="status" aria-live="polite"></div>
+        <p>この端末専用の学習アカウントで保存されます。別の端末には履歴を引き継ぎません。</p>
+      </div>
+
+      <div class="auth-divider"><span>またはメールでログイン</span></div>
+
+      <div class="email-auth-box">
+        <input id="auth-email-input" type="email" inputmode="email" autocomplete="email" placeholder="メールアドレス">
+        <input id="auth-password-input" type="password" autocomplete="current-password" placeholder="パスワード（6文字以上）">
+        <div class="email-auth-actions">
+          <button type="button" class="email-login-btn" onclick="loginEmail()">ログイン</button>
+          <button type="button" class="email-signup-btn" onclick="signupEmail()">新規登録</button>
+        </div>
+        <button type="button" class="password-reset-btn" onclick="resetPassword()">パスワードを忘れた場合</button>
+      </div>
+
+      <button type="button" class="auth-guest-btn" onclick="startWithoutLogin()">ログインせずに始める</button>
+      <p class="welcome-note">学校コードやランキングを使う場合はログインがおすすめです。</p>
+    </div>
+  </div>
+
+
+</div>
+<footer style="
+  margin-top:40px;
+  padding:24px 20px;
+  background:rgba(255,255,255,0.9);
+  border-top:1px solid #dce4ec;
+  backdrop-filter:blur(8px);
+  text-align:center;
+">
+  <div style="
+    font-family:'Playfair Display', serif;
+    font-size:18px;
+    color:#d4af37;
+    font-weight:bold;
+    letter-spacing:0.5px;
+    margin-bottom:6px;
+  ">
+    古文単語マスター
+  </div>
+
+  <div style="
+    font-size:11px;
+    color:#6c7a89;
+    margin-bottom:10px;
+  ">
+    読んで見て覚える 重要古文単語315 学習サポートツール
+  </div>
+
+  <div style="
+    width:60px;
+    height:1px;
+    background:#dce4ec;
+    margin:0 auto 10px auto;
+  "></div>
+
+  <div style="
+    font-size:12px;
+    color:#6c7a89;
+    line-height:1.7;
+  ">
+    本サイトは個人が運営する非公式ツールであり、<br>
+    駿台文庫株式会社とは一切関係ありません。
+  </div>
+</footer>
+
+
+<script src="assets/js/app.js?v=2.0"></script>
+</body>
+</html>
