@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ことのは単語</title>
+<title>ことのは単語 5訂版</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/main.css?v=2.0">
 
@@ -14,7 +14,7 @@
 
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c9a227">
+<meta name="theme-color" content="#7652a8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ことのは単語">
@@ -121,8 +121,8 @@
             <div class="select-wrap">
               <select id="mode-select" class="settings-select" onchange="selectMode(Number(this.value))">
                 <option value="1">① 古文単語 → 現代語訳（6択）</option>
-                <option value="2">② 日本語 → 英語（6択）</option>
-                <option value="3">③ 日本語 → 英語（記述）</option>
+                <option value="2">② 現代語訳 → 古文単語（6択）</option>
+                <option value="3">③ 現代語訳 → 古文単語（記述）</option>
               </select>
             </div>
           </div>
@@ -144,7 +144,7 @@
           </div>
           <div class="mobile-study-choices" aria-label="出題項目">
             <span>出題項目</span>
-            <div class="mobile-choice-grid"><button type="button" data-mode="1" onclick="chooseMobileMode(1)">古文単語 → 現代語訳<small>6択</small></button><button type="button" data-mode="2" onclick="chooseMobileMode(2)">日本語 → 英語<small>6択</small></button><button type="button" data-mode="3" onclick="chooseMobileMode(3)">日本語 → 英語<small>記述</small></button></div>
+            <div class="mobile-choice-grid"><button type="button" data-mode="1" onclick="chooseMobileMode(1)">古文単語 → 現代語訳<small>6択</small></button><button type="button" data-mode="2" onclick="chooseMobileMode(2)">現代語訳 → 古文単語<small>6択</small></button><button type="button" data-mode="3" onclick="chooseMobileMode(3)">現代語訳 → 古文単語<small>記述</small></button></div>
             <span>出題対象</span>
             <div class="mobile-choice-grid target-grid"><button type="button" data-retest="all" onclick="chooseMobileRetest('all')">すべて</button><button type="button" data-retest="mix" onclick="chooseMobileRetest('mix')">回答済み</button><button type="button" data-retest="circle" onclick="chooseMobileRetest('circle')">正解</button><button type="button" data-retest="cross" onclick="chooseMobileRetest('cross')">間違い</button><button type="button" data-retest="bookmark" onclick="chooseMobileRetest('bookmark')">☆ 保存済み</button></div>
           </div>
@@ -195,7 +195,7 @@
         <summary>単語リストを開く</summary>
         <div class="word-table-wrap">
           <div class="word-table-header">
-            <span></span><span>No.</span><span>英語</span><span>意味</span><span>進捗 / ①②③</span>
+            <span></span><span>No.</span><span>古文単語</span><span>意味</span><span>進捗 / ①②③</span>
           </div>
           <div class="word-table-scroll" id="word-table-body"></div>
         </div>
@@ -207,7 +207,7 @@
       <div class="quiz-header-left" style="display:flex;align-items:center;gap:12px;">
         <button class="back-btn" onclick="quitQuiz()">中断</button>
         <span class="quiz-type-tag type-normal" id="quiz-type-tag">通常クイズ</span>
-        <span class="quiz-mode-tag" id="quiz-mode-tag">① 英語→日本語</span>
+        <span class="quiz-mode-tag" id="quiz-mode-tag">① 古文単語→現代語訳</span>
       </div>
       <div class="quiz-header-right" style="text-align:right;">
         <div class="quiz-progress-label">進捗</div>
@@ -221,7 +221,7 @@
       <div class="question-card" style="position:relative;">
         <div class="quiz-action-row" aria-label="単語操作">
           <button class="quiz-bm-btn" id="quiz-bm-btn" onclick="toggleQuizBookmark()" title="ブックマーク">☆</button>
-          <button class="quiz-voice-btn" id="quiz-voice-btn" onclick="speakCurrentQuizWord()" title="英単語を聞く" aria-label="英単語を聞く">🔊</button>
+          <button class="quiz-voice-btn" id="quiz-voice-btn" onclick="speakCurrentQuizWord()" title="古文単語を聞く" aria-label="古文単語を聞く">🔊</button>
         </div>
         <div class="result-overlay correct-flash" id="correct-flash">✓</div>
         <div class="result-overlay wrong-flash" id="wrong-flash">✗</div>
@@ -237,7 +237,7 @@
             <div class="answer-user-text" id="answer-user-text"></div>
           </div>
           <div class="answer-reveal">
-            <div class="answer-reveal-label">正解の英単語</div>
+            <div class="answer-reveal-label">正解の古文単語</div>
             <div class="answer-reveal-text" id="answer-reveal-text"></div>
           </div>
           <div class="answer-auto-judge" id="answer-auto-judge" style="display:none"></div>
@@ -302,8 +302,8 @@
             <div class="select-wrap">
               <select id="bm-mode-select" class="settings-select" onchange="selectBmMode(Number(this.value))">
                 <option value="1">① 古文単語 → 現代語訳（6択）</option>
-                <option value="2">② 日本語 → 英語（6択）</option>
-                <option value="3">③ 日本語 → 英語（記述）</option>
+                <option value="2">② 現代語訳 → 古文単語（6択）</option>
+                <option value="3">③ 現代語訳 → 古文単語（記述）</option>
               </select>
             </div>
           </div>

@@ -6041,3 +6041,6 @@ body.is-studying > footer { display:none !important; }
 .google-login-card .chosen-email { border-color:var(--border); color:var(--text); }
 .google-login-card .google-back-button { color:var(--text2); }
 @media(max-width:520px) { .google-login-page { background:var(--bg); } .google-login-card { border:1px solid var(--border); border-radius:18px; box-shadow:0 4px 18px rgba(44,62,80,.06); } }
+
+/* ???????? */
+:root { --gold: #7652a8; --gold2: #56317f; --gold-soft: rgba(118,82,168,.13); }

@@ -599,25 +599,25 @@ function setAutoVoiceEnabled(enabled) {
   localStorage.setItem(VOICE_AUTO_KEY, enabled ? '1' : '0');
   renderAccountSettings && renderAccountSettings();
 }
-function speakWordText(text, lang = 'en-US') {
-  if (!text || !isVoiceSupported()) {
-    alert('この端末では音声読み上げに対応していません。');
-    return;
-  }
+const VOICEVOX_BASE_URL = window.KOTONOHA_VOICEVOX_URL || '/voicevox';
+const VOICEVOX_SPEAKER = 3;
+function isVoiceSupported() { return typeof window !== 'undefined' && typeof fetch === 'function' && typeof AudioContext !== 'undefined'; }
+function isAutoVoiceEnabled() { return localStorage.getItem(VOICE_AUTO_KEY) === '1'; }
+function setAutoVoiceEnabled(enabled) { localStorage.setItem(VOICE_AUTO_KEY, enabled ? '1' : '0'); renderAccountSettings && renderAccountSettings(); }
+async function speakWordText(text) {
+  if (!text || !isVoiceSupported()) { showSyncStatus('VOICEVOX読み上げを利用できません', true); return; }
   try {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text));
-    u.lang = lang;
-    u.rate = 0.86;
-    u.pitch = 1;
-    u.volume = 1;
-    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    const languagePrefix = lang.split('-')[0];
-    const preferred = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase()) ||
-      voices.find(v => v.lang.toLowerCase().startsWith(languagePrefix.toLowerCase()));
-    if (preferred) u.voice = preferred;
-    window.speechSynthesis.speak(u);
-  } catch (e) { console.warn('speech failed', e); }
+    const base = VOICEVOX_BASE_URL.replace(/\/$/, '');
+    const queryResponse = await fetch(`${base}/audio_query?text=${encodeURIComponent(String(text))}&speaker=${VOICEVOX_SPEAKER}`, { method: 'POST' });
+    if (!queryResponse.ok) throw new Error(`VOICEVOX audio_query failed: ${queryResponse.status}`);
+    const query = await queryResponse.json();
+    const audioResponse = await fetch(`${base}/synthesis?speaker=${VOICEVOX_SPEAKER}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(query) });
+    if (!audioResponse.ok) throw new Error(`VOICEVOX synthesis failed: ${audioResponse.status}`);
+    const context = new AudioContext();
+    const decoded = await context.decodeAudioData(await audioResponse.arrayBuffer());
+    const source = context.createBufferSource(); source.buffer = decoded; source.connect(context.destination); source.start();
+    source.addEventListener('ended', () => context.close(), { once: true });
+  } catch (e) { console.warn('VOICEVOX speech failed:', e); showSyncStatus('VOICEVOXに接続できません', true); }
 }
 function speakWordById(wordId, event) {
   if (event) event.stopPropagation();
@@ -626,34 +626,13 @@ function speakWordById(wordId, event) {
 }
 function speakCurrentQuizWord() {
   if (!quiz || !quiz.words || !quiz.words[quiz.idx]) return;
-  const word = quiz.words[quiz.idx];
-  const asksForEnglish = quiz.mode === 1;
-  speakWordText(asksForEnglish ? word.en : word.jp, asksForEnglish ? 'en-US' : 'ja-JP');
+  speakWordText(quiz.words[quiz.idx].en);
 }
 function toggleAutoVoiceFromSettings() {
   const input = document.getElementById('voice-auto-toggle');
   setAutoVoiceEnabled(!!(input && input.checked));
 }
-function renderVoiceSettingsCard() {
-  const checked = isAutoVoiceEnabled() ? 'checked' : '';
-  const disabled = isVoiceSupported() ? '' : 'disabled';
-  const help = isVoiceSupported() ? 'クイズで英単語が表示されたときに自動で読み上げます。' : 'このブラウザは音声読み上げに対応していません。';
-  return `
-    <div class="account-card voice-settings-card">
-      <div class="ranking-meta-title">音声</div>
-      <div class="voice-setting-row">
-        <div>
-          <div class="voice-setting-title">英単語の自動読み上げ</div>
-          <div class="account-help">${help}</div>
-        </div>
-        <label class="voice-switch">
-          <input id="voice-auto-toggle" type="checkbox" ${checked} ${disabled} onchange="toggleAutoVoiceFromSettings()">
-          <span></span>
-        </label>
-      </div>
-      <button class="btn btn-secondary voice-test-btn" onclick="speakWordText('?????????????????????????????????????????????????????????????')">音声テスト</button>
-    </div>`;
-}
+function renderVoiceSettingsCard() { return ''; }
 
 let leaderboardStats = { totalAnswered: 0, totalCorrect: 0, totalWrong: 0, updatedAt: null };
 let leaderboardCache = [];
@@ -1947,12 +1926,12 @@ function renderSchoolCodeSettings() {
           <input id="admin-class-school" class="account-input" placeholder="発行済みの学校ID" maxlength="20">
           <input id="admin-class-id" class="account-input" placeholder="クラスID（学校共通なら空欄）" maxlength="20">
           <input id="admin-class-name" class="account-input" placeholder="クラス名 例：2年A組（任意）" maxlength="40">
-          <input id="admin-class-start" class="account-input" type="number" min="1" max="339" placeholder="開始番号">
-          <input id="admin-class-end" class="account-input" type="number" min="1" max="339" placeholder="終了番号">
+          <input id="admin-class-start" class="account-input" type="number" min="1" max="2027" placeholder="開始番号">
+          <input id="admin-class-end" class="account-input" type="number" min="1" max="2027" placeholder="終了番号">
           <button type="button" class="btn btn-primary" onclick="saveClassTestRange()">このクラスの範囲を保存</button>
         </div>
         <div class="admin-dashboard-card">
-          
+
           <div id="admin-dashboard-body" class="admin-dashboard-body"></div>
         </div>
       ` : `
@@ -2486,7 +2465,7 @@ function renderAccountSettings() {
         </div></section>`;
     }
   } else if (accountSettingsTab === 'study') {
-    panel = `<section class="account-card"><h2 class="account-panel-title">単語学習設定</h2><p class="account-help">問題の読み上げなど、学習時の設定を変更できます。</p>${renderVoiceSettingsCard()}</section>`;
+    panel = `<section class="account-card"><h2 class="account-panel-title">単語学習設定</h2><p class="account-help">学習時の設定を変更できます。</p>${renderVoiceSettingsCard()}</section>`;
   } else {
     panel = `<section class="account-card"><h2 class="account-panel-title">学校との紐づけ</h2><p class="account-help">学校IDを登録すると、学校別ランキングやクラスの出題範囲が使えます。ログイン中は所属をアカウントに保存します。</p>${renderSchoolCodeSettings()}${signedInUser ? renderRoleAccessSettingsCard(user) : '<button class="btn btn-primary" type="button" onclick="login()">学校をアカウントに登録するにはログイン</button>'}</section>`;
   }
@@ -3100,7 +3079,7 @@ function startQuizSession(words, type) {
 }
 
 function updateQuizHeader() {
-  const modeLabels = { 1: '① 英語→日本語', 2: '② 日本語→英語', 3: '③ 日本語→英語（記述）' };
+  const modeLabels = { 1: '① 古文単語→現代語訳', 2: '② 現代語訳→古文単語', 3: '③ 現代語訳→古文単語（記述）' };
   const typeLabels = { normal: '通常クイズ', review: '復習テスト', bookmark: '★ブックマーク' };
   const typeClasses = { normal: 'type-normal', review: 'type-review', bookmark: 'type-bookmark' };
   document.getElementById('quiz-mode-tag').textContent = modeLabels[quiz.mode];
@@ -3166,12 +3145,12 @@ function renderQuestion() {
       qPhonetic.textContent = phonetic;
       qPhonetic.style.display = phonetic ? 'block' : 'none';
     }
-    qPrompt.textContent = '次の英単語の意味として正しいものを選んでください';
+    qPrompt.textContent = '次の古文単語の意味として正しいものを選んでください';
     qSub.textContent = '';
     const choices = buildMode1Choices(word);
     quiz.choices = choices;
     container.innerHTML = '';
-    
+
     const grid = document.createElement('div');
     grid.className = 'choices';
     grid.id = 'mode1-choices-grid';
@@ -3188,7 +3167,7 @@ function renderQuestion() {
   } else if (quiz.mode === 2) {
     qWord.style.display = 'none'; qMeaning.style.display = 'block';
     qMeaning.textContent = word.jp;
-    qPrompt.textContent = '次の意味に対応する英単語を1つ選んでください';
+    qPrompt.textContent = '次の意味に対応する古文単語を1つ選んでください';
     qSub.textContent = '';
     const choices = buildMode2SingleChoices(word);
     quiz.choices = choices;
@@ -3211,10 +3190,10 @@ function renderQuestion() {
   } else {
     qWord.style.display = 'none'; qMeaning.style.display = 'block';
     qMeaning.textContent = word.jp;
-    qPrompt.textContent = 'この意味に対応する英単語を書いてください（自動採点）';
+    qPrompt.textContent = 'この意味に対応する古文単語を書いてください（自動採点）';
     qSub.textContent = '';
     container.innerHTML = `
-      <input type="text" class="answer-input" id="free-answer" placeholder="英語で入力..." 
+      <input type="text" class="answer-input" id="free-answer" placeholder="古文単語で入力..."
         onkeydown="if(event.key==='Enter')gradeTypedAnswer()" autocomplete="off" autocapitalize="none" spellcheck="false">
       <button class="confirm-btn" onclick="gradeTypedAnswer()">採点する</button>
     `;
@@ -3222,7 +3201,7 @@ function renderQuestion() {
 
   const voiceButton = document.getElementById('quiz-voice-btn');
   if (voiceButton) {
-    const label = quiz.mode === 1 ? '英単語を聞く' : '日本語の意味を聞く';
+    const label = quiz.mode === 1 ? '古文単語を聞く' : '現代語訳を聞く';
     voiceButton.title = label;
     voiceButton.setAttribute('aria-label', label);
   }
@@ -3427,7 +3406,7 @@ function nextQuestion() {
 function finishQuiz() {
   const correct = quiz.results.filter(r => r.correct).length;
   const wrong = quiz.results.length - correct;
-  
+
   const titleEl = document.getElementById('result-title');
   const subEl = document.getElementById('result-sub');
   const statsEl = document.getElementById('result-stats');
@@ -3436,7 +3415,7 @@ function finishQuiz() {
   const typeLabel = { normal: '通常クイズ', review: '復習テスト', bookmark: '★ブックマーク' }[quiz.type];
   titleEl.textContent = `${typeLabel}完了！`;
   subEl.textContent = `全${quiz.results.length}問`;
-  
+
   statsEl.innerHTML = `
     <div class="result-stat-item correct">
       <div class="result-stat-num">${correct}</div>
@@ -3767,7 +3746,7 @@ function renderBookmarks() {
   let html = `
     <div class="word-table-wrap">
       <div class="word-table-header" style="grid-template-columns:28px 40px 120px 1fr 90px 32px;">
-        <span></span><span>No.</span><span>英語</span><span>意味</span><span>進捗</span><span></span>
+        <span></span><span>No.</span><span>古文単語</span><span>意味</span><span>進捗</span><span></span>
       </div>
       <div class="word-table-scroll">`;
 
