@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6fa">
+  <title>ログイン | ことのは単語</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="login-page google-login-page">
+  <main class="google-login-shell">
+    <a class="login-back-link" href="./index.html">← 学習画面に戻る</a>
+    <section class="google-login-card" aria-labelledby="login-title">
+      <div class="login-brand-mark" aria-hidden="true">S</div>
+
+      <div id="email-step" class="login-step">
+        <h1 id="login-title">ログイン</h1>
+        <p class="google-login-subtitle">ことのは単語を続ける</p>
+        <form id="email-form" novalidate>
+          <label class="google-field-label" for="email-input">メールアドレス</label>
+          <input id="email-input" class="google-login-input" type="email" autocomplete="username" inputmode="email" required placeholder="メールアドレスを入力">
+          <button type="submit" class="google-primary-button">次へ</button>
+        </form>
+        <button type="button" class="google-account-create-link" id="signup-from-email">アカウントを作成</button>
+        <div class="google-or"><span>または</span></div>
+        <button type="button" class="google-provider-button" data-google-login>
+          <svg class="google-g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.8 6.1-14.9Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.7l-6.6-5c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.6 27.9a12 12 0 0 1 0-7.8v-5.2H5.8a20 20 0 0 0 0 18.2l6.8-5.2Z"/><path fill="#EA4335" d="M24 11.7c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 5.7 29.5 4 24 4A20 20 0 0 0 5.8 14.9l6.8 5.2c1.6-4.8 6.1-8.4 11.4-8.4Z"/></svg>
+          <span>Google で続行</span>
+        </button>
+        <button type="button" class="google-school-link" id="open-school-step">学校IDでサインイン</button>
+      </div>
+
+      <div id="password-step" class="login-step" hidden>
+        <button type="button" class="google-back-button" data-back-email aria-label="メールアドレスに戻る">←</button>
+        <h1>パスワードを入力</h1>
+        <p id="chosen-email" class="chosen-email"></p>
+        <form id="password-form" novalidate>
+          <label class="google-field-label" for="password-input">パスワード</label>
+          <input id="password-input" class="google-login-input" type="password" autocomplete="current-password" minlength="6" required placeholder="パスワード">
+          <button type="submit" class="google-primary-button">ログイン</button>
+        </form>
+        <button type="button" class="google-account-create-link" id="signup-button">このメールアドレスで新規登録</button>
+        <button type="button" class="google-school-link" id="reset-button">パスワードを忘れた場合</button>
+      </div>
+
+      <div id="school-step" class="login-step" hidden>
+        <button type="button" class="google-back-button" data-back-email aria-label="ログイン方法に戻る">←</button>
+        <h1>学校IDでサインイン</h1>
+        <p class="google-login-subtitle">学校から配布されたIDを入力してください。</p>
+        <form id="school-form" novalidate>
+          <label class="google-field-label" for="school-id-input">学校ID</label>
+          <input id="school-id-input" class="google-login-input" maxlength="20" autocomplete="off" autocapitalize="characters" required placeholder="学校ID">
+          <button type="submit" class="google-primary-button">次へ</button>
+        </form>
+      </div>
+
+      <div id="school-success-step" class="login-step" hidden>
+        <div id="school-logo-preview" class="school-login-logo" hidden></div>
+        <h1 id="school-welcome-title">学校でサインインしました</h1>
+        <p id="school-welcome-subtitle" class="google-login-subtitle"></p>
+        <div class="school-next-actions">
+          <button type="button" class="google-primary-button" id="school-continue">学習を始める</button>
+          <div class="google-or"><span>学習記録をアカウントに連携</span></div>
+          <button type="button" class="google-provider-button" data-google-login>
+            <svg class="google-g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.8 6.1-14.9Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.7l-6.6-5c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.6 27.9a12 12 0 0 1 0-7.8v-5.2H5.8a20 20 0 0 0 0 18.2l6.8-5.2Z"/><path fill="#EA4335" d="M24 11.7c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 5.7 29.5 4 24 4A20 20 0 0 0 5.8 14.9l6.8 5.2c1.6-4.8 6.1-8.4 11.4-8.4Z"/></svg>
+            <span>Google と連携</span>
+          </button>
+          <button type="button" class="google-school-link" id="school-email-link">メールアドレスで連携</button>
+        </div>
+      </div>
+
+      <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
+    </section>
+    <footer class="google-login-footer">ことのは単語</footer>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDHKbY8W78Z02at8GZa2fLX65AWo0TsezI",
+      authDomain: "systan-app-v6.firebaseapp.com",
+      projectId: "systan-app-v6",
+      storageBucket: "systan-app-v6.firebasestorage.app",
+      messagingSenderId: "932991616778",
+      appId: "1:932991616778:web:661dc2452baa2ea1305cf3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const $ = id => document.getElementById(id);
+    let activeScreen = 'email-step';
+    let verifiedEmail = '';
+    let schoolSession = null;
+    const query = new URLSearchParams(location.search);
+    const requestedReturn = query.get('return');
+    const returnPaths = { account: './index.html?view=account', admin: './admin.html', teacher: './teacher.html' };
+    const showMessage = (text = '', error = false) => {
+      $('login-message').textContent = text;
+      $('login-message').classList.toggle('error', error);
+    };
+    const showStep = id => {
+      ['email-step', 'password-step', 'school-step', 'school-success-step'].forEach(step => { $(step).hidden = step !== id; });
+      activeScreen = id;
+      showMessage();
+      if (id === 'password-step') $('password-input').focus();
+      if (id === 'email-step') $('email-input').focus();
+    };
+    const finish = () => location.replace(returnPaths[requestedReturn] || returnPaths.account);
+    const normalizeCode = value => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 20);
+    function authMessage(error) {
+      const messages = {
+        'auth/invalid-email': 'メールアドレスの形式を確認してください。',
+        'auth/user-not-found': 'メールアドレスまたはパスワードを確認してください。',
+        'auth/wrong-password': 'メールアドレスまたはパスワードを確認してください。',
+        'auth/invalid-credential': 'メールアドレスまたはパスワードを確認してください。',
+        'auth/email-already-in-use': 'このメールアドレスは登録済みです。ログインしてください。',
+        'auth/weak-password': 'パスワードは6文字以上にしてください。',
+        'auth/popup-closed-by-user': 'ログイン画面が閉じられました。',
+        'auth/credential-already-in-use': 'このメールアドレスは別のアカウントで使用中です。ログイン後、マイページで学校IDを登録してください。',
+        'school-not-found': '学校IDを確認してください。',
+        'class-not-found': 'クラスIDを確認してください。'
+      };
+      return messages[error?.code] || '続行できませんでした。入力内容を確認して、もう一度お試しください。';
+    }
+    async function withBusy(button, task) {
+      if (button) button.disabled = true;
+      showMessage('確認しています…');
+      try { await task(); }
+      catch (error) { console.warn('Sign-in step failed:', error); showMessage(authMessage(error), true); }
+      finally { if (button) button.disabled = false; }
+    }
+    function getSchoolSession() {
+      if (schoolSession) return schoolSession;
+      const code = normalizeCode(localStorage.getItem('systan_school_code_v1'));
+      if (!code) return null;
+      return { schoolId: code, schoolName: localStorage.getItem('systan_school_name_v1') || '' };
+    }
+    async function attachSchoolToCurrentUser() {
+      const school = getSchoolSession();
+      const user = auth.currentUser;
+      if (!school || !user) return;
+      await db.collection('users').doc(user.uid).set({
+        schoolCode: school.schoolId,
+        schoolName: school.schoolName || null,
+        schoolCodeUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      localStorage.setItem('systan_school_code_v1', school.schoolId);
+      localStorage.setItem('systan_school_name_v1', school.schoolName || '');
+      const raw = localStorage.getItem('systan_class_session_v1');
+      if (raw) {
+        try {
+          const assignment = JSON.parse(raw);
+          assignment.uid = user.uid;
+          assignment.local = false;
+          localStorage.setItem('systan_class_session_v1', JSON.stringify(assignment));
+        } catch (e) { console.warn('Could not update the school session:', e); }
+      }
+    }
+    async function signInGoogle() {
+      const button = document.activeElement;
+      await withBusy(button, async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const user = auth.currentUser;
+        if (schoolSession && user?.isAnonymous) {
+          try { await user.linkWithPopup(provider); }
+          catch (error) {
+            if (error.code !== 'auth/credential-already-in-use') throw error;
+            await auth.signInWithPopup(provider);
+          }
+        } else {
+          await auth.signInWithPopup(provider);
+        }
+        await attachSchoolToCurrentUser();
+        finish();
+      });
+    }
+    document.querySelectorAll('[data-google-login]').forEach(button => button.addEventListener('click', signInGoogle));
+
+    $('email-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const email = $('email-input').value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showMessage('有効なメールアドレスを入力してください。', true);
+        $('email-input').focus();
+        return;
+      }
+      const button = $('email-form').querySelector('button[type="submit"]');
+      await withBusy(button, async () => {
+        verifiedEmail = email;
+        $('chosen-email').textContent = email;
+        try { await auth.fetchSignInMethodsForEmail(email); }
+        catch (error) { console.warn('Email verification lookup unavailable:', error); }
+        showStep('password-step');
+      });
+    });
+    $('signup-from-email').addEventListener('click', () => {
+      const email = $('email-input').value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showMessage('先に有効なメールアドレスを入力してください。', true);
+        $('email-input').focus();
+        return;
+      }
+      verifiedEmail = email;
+      $('chosen-email').textContent = email;
+      $('signup-button').dataset.create = '1';
+      showStep('password-step');
+      $('signup-button').textContent = 'このメールアドレスで新規登録';
+    });
+    document.querySelectorAll('[data-back-email]').forEach(button => button.addEventListener('click', () => showStep(activeScreen === 'school-step' ? 'email-step' : 'email-step')));
+
+    async function emailCredential(createAccount) {
+      const password = $('password-input').value;
+      if (password.length < 6) { showMessage('パスワードは6文字以上で入力してください。', true); return; }
+      const button = createAccount ? $('signup-button') : $('password-form').querySelector('button[type="submit"]');
+      await withBusy(button, async () => {
+        const user = auth.currentUser;
+        if (createAccount && schoolSession && user?.isAnonymous) {
+          const credential = firebase.auth.EmailAuthProvider.credential(verifiedEmail, password);
+          await user.linkWithCredential(credential);
+        } else if (createAccount) {
+          await auth.createUserWithEmailAndPassword(verifiedEmail, password);
+        } else if (schoolSession && user?.isAnonymous) {
+          const credential = firebase.auth.EmailAuthProvider.credential(verifiedEmail, password);
+          try { await user.linkWithCredential(credential); }
+          catch (error) {
+            if (error.code !== 'auth/email-already-in-use' && error.code !== 'auth/credential-already-in-use') throw error;
+            await auth.signInWithEmailAndPassword(verifiedEmail, password);
+          }
+        } else {
+          await auth.signInWithEmailAndPassword(verifiedEmail, password);
+        }
+        await attachSchoolToCurrentUser();
+        finish();
+      });
+    }
+    $('password-form').addEventListener('submit', event => { event.preventDefault(); emailCredential(false); });
+    $('signup-button').addEventListener('click', () => emailCredential(true));
+    $('reset-button').addEventListener('click', async () => {
+      if (!verifiedEmail) return;
+      await withBusy($('reset-button'), async () => {
+        await auth.sendPasswordResetEmail(verifiedEmail);
+        showMessage('パスワード再設定メールを送信しました。');
+      });
+    });
+    $('open-school-step').addEventListener('click', () => showStep('school-step'));
+    $('school-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const schoolId = normalizeCode($('school-id-input').value);
+      if (!schoolId) { showMessage('学校IDを入力してください。', true); return; }
+      const button = $('school-form').querySelector('button[type="submit"]');
+      await withBusy(button, async () => {
+        const schoolRef = db.collection('schoolCodes').doc(schoolId);
+        const schoolSnap = await schoolRef.get();
+        if (!schoolSnap.exists || schoolSnap.data()?.active === false) throw Object.assign(new Error(), { code: 'school-not-found' });
+        const school = schoolSnap.data() || {};
+
+        if (!auth.currentUser) await auth.signInAnonymously();
+        const schoolName = String(school.schoolName || school.name || '').trim().slice(0, 40);
+        schoolSession = { schoolId, schoolName };
+        await attachSchoolToCurrentUser();
+        const logo = typeof school.schoolLogoData === 'string' && school.schoolLogoData.length <= 260000 && /^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/.test(school.schoolLogoData) ? school.schoolLogoData : '';
+        if (logo) localStorage.setItem('systan_school_logo_v1_' + schoolId, logo);
+        const range = school;
+        const startId = Number(range.startId), endId = Number(range.endId);
+        const validRange = Number.isInteger(startId) && Number.isInteger(endId) && startId >= 1 && endId <= 339 && startId <= endId;
+        localStorage.setItem('systan_class_session_v1', JSON.stringify({ uid: auth.currentUser.uid, local: false, schoolId, classId: '', startId: validRange ? startId : null, endId: validRange ? endId : null, schoolName, className: '' }));
+        $('school-welcome-title').textContent = schoolName || '学校でサインインしました';
+        $('school-welcome-subtitle').textContent = '学校のアカウントでログイン中です。通常のアカウントを連携すると、別の端末でも学習記録を利用できます。';
+        const preview = $('school-logo-preview');
+        if (logo) {
+          const image = document.createElement('img');
+          image.src = logo;
+          image.alt = schoolName || '学校ロゴ';
+          preview.replaceChildren(image);
+          preview.hidden = false;
+        } else { preview.replaceChildren(); preview.hidden = true; }
+        showStep('school-success-step');
+      });
+    });
+    $('school-continue').addEventListener('click', finish);
+    $('school-email-link').addEventListener('click', () => showStep('email-step'));
+  </script>
+</body>
+</html>

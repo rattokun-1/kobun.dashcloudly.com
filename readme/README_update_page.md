@@ -1,4 +1,4 @@
-﻿# update.html
+# update.html
 
 PWA更新用ページです。
 

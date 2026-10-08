@@ -1,49 +1,11 @@
-﻿/* Firebase Cloud Messaging for installed PWA notifications */
-try {
-  importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-  importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
-  firebase.initializeApp({
-    apiKey: "AIzaSyDHKbY8W78Z02at8GZa2fLX65AWo0TsezI",
-    authDomain: "systan-app-v6.firebaseapp.com",
-    projectId: "systan-app-v6",
-    storageBucket: "systan-app-v6.firebasestorage.app",
-    messagingSenderId: "932991616778",
-    appId: "1:932991616778:web:661dc2452baa2ea1305cf3"
-  });
-  const messaging = firebase.messaging();
-  messaging.onBackgroundMessage((payload) => {
-    const title = (payload.data && payload.data.title) || (payload.notification && payload.notification.title) || '古文単語マスター';
-    const options = {
-      body: (payload.data && payload.data.body) || (payload.notification && payload.notification.body) || '',
-      icon: './assets/icons/icon.png',
-      badge: './assets/icons/icon.png',
-      data: payload.data || {},
-      tag: payload.data && payload.data.tag ? payload.data.tag : 'kobun-master-notice'
-    };
-    self.registration.showNotification(title, options);
-  });
-} catch (e) {
-  // Messagingが使えない環境でもPWAキャッシュは動かす
-}
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil((async () => {
-    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const client of allClients) {
-      if ('focus' in client) { await client.focus(); client.postMessage({type:'OPEN_NOTIFICATIONS'}); return; }
-    }
-    if (clients.openWindow) return clients.openWindow('./?view=notifications');
-  })());
-});
-
-/* 古文単語マスター PWA Service Worker */
-const CACHE_VERSION = '20260925-onboarding-v2.0';
+/* ことのは単語 PWA Service Worker */
+const CACHE_VERSION = '20261007-ui-v2.1';
 const CACHE_NAME = 'kobun-master-' + CACHE_VERSION;
 
 const APP_SHELL = [
   './',
   './index.html',
+  './login.html',
   './maintenance.html',
   './update.html',
   './manifest.json',
