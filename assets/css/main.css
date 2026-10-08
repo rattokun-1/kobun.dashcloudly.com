@@ -6042,5 +6042,32 @@ body.is-studying > footer { display:none !important; }
 .google-login-card .google-back-button { color:var(--text2); }
 @media(max-width:520px) { .google-login-page { background:var(--bg); } .google-login-card { border:1px solid var(--border); border-radius:18px; box-shadow:0 4px 18px rgba(44,62,80,.06); } }
 
+/* Shared DashCloudly 学習ID sign-in motion. */
+.google-login-card { animation: login-card-in .55s cubic-bezier(.22,1,.36,1) both; }
+.google-login-card > .login-brand-mark { animation: login-brand-pulse 2.8s ease-in-out .65s infinite; }
+.login-account-note { margin:-16px 0 23px; color:var(--text2); font-size:12px; line-height:1.6; text-align:center; }
+.login-step-active { animation: login-step-in .28s ease-out both; }
+.google-login-card button:not(:disabled) { transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
+.google-login-card button:not(:disabled):hover { transform:translateY(-1px); }
+.google-login-card button:not(:disabled):active { transform:translateY(1px) scale(.99); }
+.google-login-input { transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.google-login-input:focus { transform:translateY(-1px); }
+@keyframes login-card-in {
+  from { opacity:0; transform:translateY(16px) scale(.985); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes login-step-in {
+  from { opacity:0; transform:translateX(8px); }
+  to { opacity:1; transform:translateX(0); }
+}
+@keyframes login-brand-pulse {
+  0%,100% { box-shadow:0 8px 20px rgba(118,82,168,.2); }
+  50% { box-shadow:0 10px 28px rgba(118,82,168,.42); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .google-login-card, .google-login-card > .login-brand-mark, .login-step-active { animation:none; }
+  .google-login-card button:not(:disabled), .google-login-input { transition:none; }
+}
+
 /* ???????? */
 :root { --gold: #7652a8; --gold2: #56317f; --gold-soft: rgba(118,82,168,.13); }
