@@ -4,7 +4,7 @@
 
 - `index.html`: 学習アプリ
 - `assets/js/app.js`: クイズ、進捗、認証、ランキング
-- `word-data.js`: 提供された315語データ
+- `word-data.js`: 提供された339行の単語データ（書名は重要古文単語315）
 - `functions/`: 共有Firebaseプロジェクト向けCloud Functions
 
 ログインユーザー・学校コードはシス単マスターと共有します。古文版のクラウド進捗は `kobunAppState`、ランキングは `rankingsKobun` に保存します。
