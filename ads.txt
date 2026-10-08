@@ -87,7 +87,7 @@ advertising.com,8603,RESELLER
 advertising.com,9516,RESELLER
 aja.vision,2331,RESELLER
 amazon.com,3411,RESELLER
-ambientdigitalgroup.com,1512027130,RESELLER
+ambientdigitalgroup.com,151339130,RESELLER
 ambientdigitalgroup.com,1512124456,RESELLER
 ambientdigitalgroup.com,1513573188,RESELLER
 ambientdigitalgroup.com,1513573223,RESELLER
@@ -246,7 +246,7 @@ fyber.com,ad9de41d28d494354b23133f26f83122,RESELLER
 fyber.com,af3fd4670c740d671b26e75cb2a1520b,RESELLER
 fyber.com,c4f4e0402029d65ad6f0ad0be9963409,RESELLER
 gammassp.com,1507780569,RESELLER
-gammassp.com,1512027130,RESELLER
+gammassp.com,151339130,RESELLER
 gammassp.com,1512124456,RESELLER
 gammassp.com,1513573188,RESELLER
 gammassp.com,1513573223,RESELLER

@@ -1,39 +1,7 @@
-﻿const WELCOME_ACCEPTED_KEY = 'systan_welcome_terms_accepted_v1';
-const FEATURE_NOTICE_VERSION = '2026.05.09-design-offline-1';
-const FEATURE_NOTICE_SEEN_KEY = 'systan_feature_notice_seen_' + FEATURE_NOTICE_VERSION;
-const FEATURE_NOTICES = [
-  {
-    date: '2026/05/09',
-    title: '単語テスト画面を見やすく改善しました',
-    body: 'PCではスクロールなしで問題・選択肢・次へボタンが見えるようにし、スマホでは押しやすさを維持しました。'
-  },
-  {
-    date: '2026/05/09',
-    title: 'オフライン対応を強化しました',
-    body: '一度読み込んだあと、通信が不安定でも基本画面と単語テストを開きやすくしました。'
-  },
-  {
-    date: '2026/05/05',
-    title: '学校別参加コードを追加しました',
-    body: '管理者が発行した参加コードで学校・クラス別ランキングに参加できるようになりました。'
-  },
-  {
-    date: '2026/05/04',
-    title: '新機能のお知らせを追加しました',
-    body: '今後、新しい機能や大きな変更が追加されたときに、アプリ内ポップアップとベルの未読表示でお知らせします。'
-  },
-  {
-    date: '2026/05/04',
-    title: 'ログインなしでも利用可能です',
-    body: 'ランキングや同期を使う場合はログイン推奨ですが、単語テストなどの基本機能はログインなしでも使えます。'
-  }
-];
-
+const WELCOME_ACCEPTED_KEY = 'systan_welcome_terms_accepted_v1';
 const SCHOOL_CODE_KEY = 'systan_school_code_v1';
 const SCHOOL_CODE_NAME_KEY = 'systan_school_name_v1';
-const PUSH_CLIENT_ID_KEY = 'systan_push_client_id_v1';
-// Firebase Console > Cloud Messaging > Web Push certificates の公開鍵を設定してください。
-const FCM_VAPID_KEY = 'BPdoAOwrH8d5aS3A1geBXcnVTdqWas71qio3zyPfx6l_r0mRvq3h2q9Z5tCxjYsvJx61oQczOLW8SAYHrItJkUw';
+const SCHOOL_LOGO_KEY_PREFIX = 'systan_school_logo_v1_';
 // 管理者のみ参加コードを発行できます。公開前に管理者のGoogleメールまたはUIDを設定してください。
 const ADMIN_EMAILS = [
   'yuki.1092.mkupo1216.m@gmail.com'
@@ -56,23 +24,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-let messaging = null;
-try {
-  if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported()) {
-    messaging = firebase.messaging();
-  }
-} catch (e) {
-  console.warn('Firebase Messaging is not available:', e);
-}
-if (messaging) messaging.onMessage(payload => {
-  const title = payload.data?.title || payload.notification?.title || '学校からの通知';
-  if (typeof showSyncStatus === 'function') showSyncStatus(title);
-  if (typeof listenSchoolNotices === 'function') listenSchoolNotices();
-});
 
 const MAINTENANCE_SETTINGS_COLLECTION = 'appSettings';
 const MAINTENANCE_SETTINGS_DOC = 'global';
-const MAINTENANCE_ADMIN_BYPASS_PARAM = 'admin';
 // update.htmlでアプリ更新・Cookie/キャッシュ削除が完了した端末だけ、
 // 現在のメンテナンスを自動解除して通常画面へ戻します。
 const MAINTENANCE_RELEASE_ID = '2026.05.09-update-cleanup-1';
@@ -86,14 +40,6 @@ function isMaintenanceCleanupDoneForDevice(settings) {
   try {
     const requiredId = getMaintenanceReleaseId(settings);
     return localStorage.getItem(MAINTENANCE_CLEANUP_DONE_KEY) === requiredId;
-  } catch (e) {
-    return false;
-  }
-}
-
-function isMaintenanceAdminBypassUrl() {
-  try {
-    return new URLSearchParams(location.search).get(MAINTENANCE_ADMIN_BYPASS_PARAM) === '1';
   } catch (e) {
     return false;
   }
@@ -143,12 +89,8 @@ async function enforceMaintenanceMode() {
   const user = await waitForAuthReady();
   const adminByEmail = user && ADMIN_EMAILS.map(v => String(v).toLowerCase()).includes(String(user.email || '').toLowerCase());
   const adminByUid = user && ADMIN_UIDS.includes(user.uid);
-  const bypass = isMaintenanceAdminBypassUrl();
 
-  if (adminByEmail || adminByUid || bypass) {
-    if (bypass && !user) {
-      setTimeout(() => showSyncStatus('管理者ログイン後、設定からメンテナンスをOFFにできます'), 800);
-    }
+  if (adminByEmail || adminByUid) {
     return false;
   }
 
@@ -268,7 +210,6 @@ async function registerOfflineCache() {
       if (!document.hidden && navigator.onLine) reg.update().catch(() => {});
     });
     navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data?.type === 'OPEN_NOTIFICATIONS') showNotifications();
       if (event.data && event.data.type === 'CACHE_READY') {
         if (typeof showSyncStatus === 'function') showSyncStatus('オフライン用データを保存しました');
       }
@@ -658,23 +599,25 @@ function setAutoVoiceEnabled(enabled) {
   localStorage.setItem(VOICE_AUTO_KEY, enabled ? '1' : '0');
   renderAccountSettings && renderAccountSettings();
 }
-function speakWordText(text) {
-  if (!text || !isVoiceSupported()) {
-    alert('この端末では音声読み上げに対応していません。');
-    return;
-  }
+const VOICEVOX_BASE_URL = window.KOTONOHA_VOICEVOX_URL || '/voicevox';
+const VOICEVOX_SPEAKER = 3;
+function isVoiceSupported() { return typeof window !== 'undefined' && typeof fetch === 'function' && typeof AudioContext !== 'undefined'; }
+function isAutoVoiceEnabled() { return localStorage.getItem(VOICE_AUTO_KEY) === '1'; }
+function setAutoVoiceEnabled(enabled) { localStorage.setItem(VOICE_AUTO_KEY, enabled ? '1' : '0'); renderAccountSettings && renderAccountSettings(); }
+async function speakWordText(text) {
+  if (!text || !isVoiceSupported()) { showSyncStatus('VOICEVOX読み上げを利用できません', true); return; }
   try {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text));
-    u.lang = 'ja-JP';
-    u.rate = 0.86;
-    u.pitch = 1;
-    u.volume = 1;
-    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    const preferred = voices.find(v => /ja[-_]JP/i.test(v.lang) && /Google|Microsoft|Japanese|Kyoko/i.test(v.name)) || voices.find(v => /^ja/i.test(v.lang));
-    if (preferred) u.voice = preferred;
-    window.speechSynthesis.speak(u);
-  } catch (e) { console.warn('speech failed', e); }
+    const base = VOICEVOX_BASE_URL.replace(/\/$/, '');
+    const queryResponse = await fetch(`${base}/audio_query?text=${encodeURIComponent(String(text))}&speaker=${VOICEVOX_SPEAKER}`, { method: 'POST' });
+    if (!queryResponse.ok) throw new Error(`VOICEVOX audio_query failed: ${queryResponse.status}`);
+    const query = await queryResponse.json();
+    const audioResponse = await fetch(`${base}/synthesis?speaker=${VOICEVOX_SPEAKER}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(query) });
+    if (!audioResponse.ok) throw new Error(`VOICEVOX synthesis failed: ${audioResponse.status}`);
+    const context = new AudioContext();
+    const decoded = await context.decodeAudioData(await audioResponse.arrayBuffer());
+    const source = context.createBufferSource(); source.buffer = decoded; source.connect(context.destination); source.start();
+    source.addEventListener('ended', () => context.close(), { once: true });
+  } catch (e) { console.warn('VOICEVOX speech failed:', e); showSyncStatus('VOICEVOXに接続できません', true); }
 }
 function speakWordById(wordId, event) {
   if (event) event.stopPropagation();
@@ -689,32 +632,15 @@ function toggleAutoVoiceFromSettings() {
   const input = document.getElementById('voice-auto-toggle');
   setAutoVoiceEnabled(!!(input && input.checked));
 }
-function renderVoiceSettingsCard() {
-  const checked = isAutoVoiceEnabled() ? 'checked' : '';
-  const disabled = isVoiceSupported() ? '' : 'disabled';
-  const help = isVoiceSupported() ? 'クイズで古文単語が表示されたときに自動で読み上げます。' : 'このブラウザは音声読み上げに対応していません。';
-  return `
-    <div class="account-card voice-settings-card">
-      <div class="ranking-meta-title">音声</div>
-      <div class="voice-setting-row">
-        <div>
-          <div class="voice-setting-title">古文単語の自動読み上げ</div>
-          <div class="account-help">${help}</div>
-        </div>
-        <label class="voice-switch">
-          <input id="voice-auto-toggle" type="checkbox" ${checked} ${disabled} onchange="toggleAutoVoiceFromSettings()">
-          <span></span>
-        </label>
-      </div>
-      <button class="btn btn-secondary voice-test-btn" onclick="speakWordText('???')">音声テスト</button>
-    </div>`;
-}
+function renderVoiceSettingsCard() { return ''; }
 
 let leaderboardStats = { totalAnswered: 0, totalCorrect: 0, totalWrong: 0, updatedAt: null };
 let leaderboardCache = [];
 let myLeaderboardRank = null;
 let accountProfile = { nickname: '' };
+let profileAvatarData = '';
 const NICKNAME_KEY = 'systan_public_nickname_v1';
+const PROFILE_AVATAR_KEY_PREFIX = 'systan_profile_avatar_v1_';
 
 const STATUS_RANK = { '◎': 4, '○': 3, '×': 2, null: 0, '': 0 };
 
@@ -968,6 +894,53 @@ function getSchoolName() {
   try { return String(localStorage.getItem(SCHOOL_CODE_NAME_KEY) || '').trim(); } catch (e) { return ''; }
 }
 
+function getCachedSchoolLogo(code = getSchoolCode()) {
+  if (!code) return '';
+  try {
+    const value = localStorage.getItem(SCHOOL_LOGO_KEY_PREFIX + normalizeSchoolCode(code)) || '';
+    return value.length <= 260000 && /^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/.test(value) ? value : '';
+  } catch (e) { return ''; }
+}
+
+function cacheSchoolLogo(code, value) {
+  const normalized = normalizeSchoolCode(code);
+  if (!normalized) return;
+  try {
+    if (typeof value === 'string' && value.length <= 260000 && /^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/.test(value)) {
+      localStorage.setItem(SCHOOL_LOGO_KEY_PREFIX + normalized, value);
+    } else {
+      localStorage.removeItem(SCHOOL_LOGO_KEY_PREFIX + normalized);
+    }
+  } catch (e) { console.warn('Could not cache school logo:', e); }
+}
+
+function renderSchoolBranding() {
+  const title = document.querySelector('.app-header .header-title');
+  if (!title) return;
+  const logo = getCachedSchoolLogo();
+  if (logo) {
+    title.innerHTML = `<img class="school-brand-logo" src="${logo}" alt="${escapeHtml(getSchoolName() || '学校ロゴ')}">`;
+    title.setAttribute('aria-label', getSchoolName() || '学校ロゴ');
+  } else {
+    title.textContent = 'ことのは単語';
+    title.removeAttribute('aria-label');
+  }
+}
+
+async function refreshSchoolBranding() {
+  const code = getSchoolCode();
+  if (!code) { renderSchoolBranding(); return; }
+  try {
+    const snap = await db.collection('schoolCodes').doc(code).get();
+    if (snap.exists) {
+      const data = snap.data() || {};
+      if (data.schoolName) setLocalSchoolCode(code, data.schoolName);
+      cacheSchoolLogo(code, data.schoolLogoData || '');
+    }
+  } catch (e) { console.warn('refreshSchoolBranding error:', e); }
+  renderSchoolBranding();
+}
+
 function setLocalSchoolCode(code, name = '') {
   const normalized = normalizeSchoolCode(code);
   try {
@@ -976,6 +949,7 @@ function setLocalSchoolCode(code, name = '') {
     if (name) localStorage.setItem(SCHOOL_CODE_NAME_KEY, String(name).trim().slice(0, 40));
     else localStorage.removeItem(SCHOOL_CODE_NAME_KEY);
   } catch (e) {}
+  renderSchoolBranding();
 }
 
 const CLASS_SESSION_KEY = 'systan_class_session_v1';
@@ -1039,7 +1013,6 @@ function leaveLocalSchool() {
   if (!activeClassAssignment?.local) return;
   storeClassAssignment(null);
   setLocalSchoolCode('', '');
-  syncPushAudience();
   showHome();
 }
 
@@ -1076,12 +1049,12 @@ async function loginSchoolClass() {
       }
     }
     const schoolName = String(schoolData.schoolName || '').slice(0,40);
+    cacheSchoolLogo(schoolId, schoolData.schoolLogoData || '');
     setLocalSchoolCode(schoolId, schoolName);
     storeClassAssignment({uid:auth.currentUser?.uid || null,local,schoolId,classId,
       startId:validRange ? startId : null,endId:validRange ? endId : null,
       schoolName,className:String(classData?.className || '').slice(0,40)});
-    if (auth.currentUser) await saveSchoolCodeToProfile(schoolId, schoolName);
-    syncPushAudience();
+    if (auth.currentUser && !await saveSchoolCodeToProfile(schoolId, schoolName)) throw new Error('school_profile_link_failed');
     closeAuthModal();
     markWelcomeAccepted();
     showHome();
@@ -1089,8 +1062,13 @@ async function loginSchoolClass() {
       (validRange ? '学校・クラスでログインしました' : '学校に参加しました。テスト範囲は未設定です'));
   } catch (e) {
     console.warn('loginSchoolClass error:', e);
-    showSchoolLoginMessage(e.code === 'permission-denied' ? '学校・クラスの設定を取得できません。管理者にFirestoreルールを確認してもらってください' :
-      (e.message || '学校IDを確認できませんでした'), true);
+    if (e.message === 'school_profile_link_failed') {
+      storeClassAssignment(null);
+      await loadSchoolCodeFromProfile();
+    }
+    showSchoolLoginMessage(e.message === 'school_profile_link_failed' ? '学校とアカウントを紐づけできませんでした。現在の所属を確認してください。' :
+      (e.code === 'permission-denied' ? '学校・クラスの設定を取得できませんでした。時間をおいて再度お試しください。' :
+      '学校IDを確認できませんでした。入力内容をご確認ください。'), true);
   } finally { if (button) button.disabled = false; }
 }
 
@@ -1254,9 +1232,12 @@ async function loadTeacherDashboard(profile = {}) {
   body.innerHTML = '<div class="school-muted">先生用データを読み込み中...</div>';
   try {
     const schoolCode = normalizeSchoolCode(profile.schoolCode || getSchoolCode() || '');
+    const usersQuery = schoolCode
+      ? db.collection('users').where('schoolCode', '==', schoolCode).limit(500).get().catch(() => null)
+      : Promise.resolve(null);
     const [rankingSnap, usersSnap, codesSnap] = await Promise.all([
-      db.collection(RANKINGS_COLLECTION).limit(500).get().catch(() => null),
-      db.collection('users').limit(500).get().catch(() => null),
+      (schoolCode ? db.collection(RANKINGS_COLLECTION).where('schoolCode', '==', schoolCode) : Promise.resolve(null)),
+      usersQuery,
       db.collection('schoolCodes').limit(200).get().catch(() => null)
     ]);
     let rankingRows = rankingSnap && rankingSnap.docs ? rankingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) : [];
@@ -1299,12 +1280,12 @@ async function loadTeacherDashboard(profile = {}) {
       </section>`;
   } catch (e) {
     console.warn('loadTeacherDashboard error:', e);
-    body.innerHTML = '<div class="role-access-card"><h1>読み込みに失敗しました</h1><p>Firestoreルールと権限設定を確認してください。</p></div>';
+    body.innerHTML = '<div class="role-access-card"><h1>読み込みに失敗しました</h1><p>時間をおいて再度お試しください。</p></div>';
   }
 }
 
 async function saveSchoolCodeToProfile(code, name = '') {
-  if (!auth.currentUser) return;
+  if (!auth.currentUser) return true;
   try {
     await db.collection('users').doc(auth.currentUser.uid).set({
       schoolCode: normalizeSchoolCode(code) || null,
@@ -1312,17 +1293,22 @@ async function saveSchoolCodeToProfile(code, name = '') {
       schoolCodeUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
     await syncLeaderboardProfile();
+    return true;
   } catch (e) {
     console.warn('saveSchoolCodeToProfile error:', e);
+    return false;
   }
 }
 
 async function loadSchoolCodeFromProfile() {
   if (!auth.currentUser) return;
   try {
-    const snap = await db.collection('users').doc(auth.currentUser.uid).get();
+    const uid = auth.currentUser.uid;
+    const snap = await db.collection('users').doc(uid).get();
     const data = snap.exists ? (snap.data() || {}) : {};
     if (data.schoolCode) setLocalSchoolCode(data.schoolCode, data.schoolName || '');
+    else setLocalSchoolCode('', '');
+    await refreshSchoolBranding();
   } catch (e) {
     console.warn('loadSchoolCodeFromProfile error:', e);
   }
@@ -1348,15 +1334,17 @@ async function joinSchoolCode() {
       return;
     }
     name = String(data.schoolName || data.name || '').trim();
+    cacheSchoolLogo(code, data.schoolLogoData || '');
   } catch (e) {
     console.warn('joinSchoolCode validation error:', e);
     showSyncStatus('参加コードを確認できませんでした', true);
     return;
   }
+  if (auth.currentUser && !await saveSchoolCodeToProfile(code, name)) {
+    showSyncStatus('この学校をアカウントに登録できませんでした。現在の所属を確認してください', true);
+    return;
+  }
   setLocalSchoolCode(code, name);
-  await saveSchoolCodeToProfile(code, name);
-  syncPushAudience();
-  listenSchoolNotices();
   await fetchLeaderboard();
   renderHomeRankingPanel();
   renderAccountSettings();
@@ -1365,11 +1353,12 @@ async function joinSchoolCode() {
 }
 
 async function clearSchoolCode() {
+  if (auth.currentUser && !await saveSchoolCodeToProfile('', '')) {
+    showSyncStatus('学校との紐づけを解除できませんでした', true);
+    return;
+  }
   setLocalSchoolCode('', '');
   storeClassAssignment(null);
-  syncPushAudience();
-  listenSchoolNotices();
-  await saveSchoolCodeToProfile('', '');
   await fetchLeaderboard();
   renderHomeRankingPanel();
   renderAccountSettings();
@@ -1431,7 +1420,66 @@ async function issueSchoolCode() {
     await loadIssuedSchoolCodes();
   } catch (e) {
     console.warn('issueSchoolCode error:', e);
-    showSyncStatus('発行に失敗しました。Firestoreルールと管理者設定を確認してください', true);
+    showSyncStatus('参加コードを発行できませんでした。時間をおいて再度お試しください', true);
+  }
+}
+
+async function saveSchoolLogo(input) {
+  const file = input?.files?.[0];
+  const code = normalizeSchoolCode(document.getElementById('admin-school-logo-code')?.value);
+  if (!file) return;
+  if (!isSchoolAdmin() || !auth.currentUser) {
+    showSyncStatus('学校ロゴの変更は管理者のみ行えます', true);
+    input.value = '';
+    return;
+  }
+  if (!code) {
+    showSyncStatus('学校IDを入力してください', true);
+    input.value = '';
+    return;
+  }
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    showSyncStatus('JPEG・PNG・WebP形式の5MB以下の画像を選んでください', true);
+    input.value = '';
+    return;
+  }
+  try {
+    const schoolRef = db.collection('schoolCodes').doc(code);
+    const schoolSnap = await schoolRef.get();
+    if (!schoolSnap.exists) throw new Error('school_not_found');
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 480 / bitmap.width, 220 / bitmap.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const logo = canvas.toDataURL('image/webp', 0.78);
+    if (logo.length > 240000) throw new Error('school_logo_too_large');
+    await schoolRef.update({ schoolLogoData: logo, schoolLogoUpdatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    cacheSchoolLogo(code, logo);
+    if (code === getSchoolCode()) renderSchoolBranding();
+    showSyncStatus('学校ロゴを保存しました');
+  } catch (e) {
+    console.warn('saveSchoolLogo error:', e);
+    showSyncStatus(e.message === 'school_not_found' ? '学校IDが見つかりません' : '学校ロゴを保存できませんでした', true);
+  } finally { input.value = ''; }
+}
+
+async function removeSchoolLogo() {
+  const code = normalizeSchoolCode(document.getElementById('admin-school-logo-code')?.value);
+  if (!isSchoolAdmin() || !auth.currentUser || !code) {
+    showSyncStatus('管理者アカウントと学校IDを確認してください', true);
+    return;
+  }
+  try {
+    await db.collection('schoolCodes').doc(code).update({ schoolLogoData: firebase.firestore.FieldValue.delete() });
+    cacheSchoolLogo(code, '');
+    renderSchoolBranding();
+    showSyncStatus('学校ロゴを削除しました');
+  } catch (e) {
+    console.warn('removeSchoolLogo error:', e);
+    showSyncStatus('学校ロゴを削除できませんでした', true);
   }
 }
 
@@ -1503,7 +1551,7 @@ async function deleteSchoolCode(code) {
 
 
 // =========================================================
-// INSTALLED APP PUSH NOTIFICATIONS
+// PWA INSTALL SUPPORT
 // =========================================================
 function isInstalledPwa() {
   return !!(
@@ -1512,128 +1560,6 @@ function isInstalledPwa() {
     document.referrer.startsWith('android-app://')
   );
 }
-
-function getPushClientId() {
-  try {
-    let id = localStorage.getItem(PUSH_CLIENT_ID_KEY);
-    if (!id) {
-      id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('client_' + Date.now() + '_' + Math.random().toString(36).slice(2));
-      localStorage.setItem(PUSH_CLIENT_ID_KEY, id);
-    }
-    return id;
-  } catch (e) {
-    return 'client_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-  }
-}
-
-function getPushStatusLabel() {
-  if (!('Notification' in window)) return 'このブラウザは通知に対応していません';
-  if (!isInstalledPwa()) return 'アプリをホーム画面に追加するとプッシュ通知を有効化できます';
-  if (!FCM_VAPID_KEY || FCM_VAPID_KEY.includes('PASTE_YOUR')) return '管理者によるプッシュ通知の設定が必要です';
-  if (Notification.permission === 'granted' && localStorage.getItem(PUSH_ENABLED_KEY) === '1') return 'プッシュ通知は有効です';
-  if (Notification.permission === 'denied') return 'ブラウザ設定で通知がブロックされています';
-  return 'プッシュ通知はまだ有効化されていません';
-}
-
-async function enableInstalledPushNotifications() {
-  if (!isInstalledPwa()) {
-    showSyncStatus('通知はインストール済みアプリでのみ有効化できます', true);
-    return;
-  }
-  if (!messaging) {
-    showSyncStatus('Firebase Messagingを利用できません', true);
-    return;
-  }
-  if (!FCM_VAPID_KEY || FCM_VAPID_KEY.includes('PASTE_YOUR')) {
-    showSyncStatus('FCM_VAPID_KEYを設定してください', true);
-    return;
-  }
-  if (!('Notification' in window)) {
-    showSyncStatus('このブラウザは通知に対応していません', true);
-    return;
-  }
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      showSyncStatus('通知が許可されませんでした', true);
-      renderAuthFab();
-      return;
-    }
-    const registration = await navigator.serviceWorker.ready;
-    const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
-    if (!token) throw new Error('FCM token was empty');
-    const clientId = getPushClientId();
-    await db.collection('pushTokens').doc(clientId).set({
-      token,
-      clientId,
-      active: true,
-      installedOnly: true,
-      userAgent: navigator.userAgent.slice(0, 240),
-      uid: auth.currentUser ? auth.currentUser.uid : null,
-      schoolId: getSchoolCode() || null,
-      classId: activeClassAssignment?.classId || '',
-      email: auth.currentUser ? (auth.currentUser.email || '') : '',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    localStorage.setItem(PUSH_ENABLED_KEY,'1');
-    showSyncStatus('インストール済みアプリへの通知を有効化しました');
-    renderNoticeInbox();
-    renderAuthFab();
-  } catch (e) {
-    console.warn('enableInstalledPushNotifications error:', e);
-    showSyncStatus('通知の有効化に失敗しました', true);
-  }
-}
-
-async function disableInstalledPushNotifications() {
-  try {
-    const clientId = getPushClientId();
-    await db.collection('pushTokens').doc(clientId).set({
-      active: false,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    localStorage.removeItem(PUSH_ENABLED_KEY);
-    showSyncStatus('通知を停止しました');
-    renderNoticeInbox();
-    renderAuthFab();
-  } catch (e) {
-    console.warn('disableInstalledPushNotifications error:', e);
-    showSyncStatus('通知停止に失敗しました', true);
-  }
-}
-
-async function sendAdminPushNotification() {
-  if (!auth.currentUser || !isSchoolAdmin()) {
-    showSyncStatus('管理者のみ通知を送信できます', true);
-    return;
-  }
-  const title = String(document.getElementById('admin-push-title')?.value || '').trim().slice(0, 60);
-  const body = String(document.getElementById('admin-push-body')?.value || '').trim().slice(0, 180);
-  if (!title || !body) {
-    showSyncStatus('通知タイトルと本文を入力してください', true);
-    return;
-  }
-  try {
-    await db.collection('pushNotifications').add({
-      title,
-      body,
-      target: 'installed',
-      status: 'queued',
-      createdByUid: auth.currentUser.uid,
-      createdByEmail: auth.currentUser.email || '',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    document.getElementById('admin-push-title').value = '';
-    document.getElementById('admin-push-body').value = '';
-    showSyncStatus('通知送信リクエストを作成しました');
-    await loadAdminDashboard();
-  } catch (e) {
-    console.warn('sendAdminPushNotification error:', e);
-    showSyncStatus('通知送信に失敗しました。Firestoreルールを確認してください', true);
-  }
-}
-
 
 function buildAdminUserRows(usersSnap, rankingSnap) {
   const map = new Map();
@@ -1847,12 +1773,10 @@ async function loadAdminDashboard() {
   }
   wrap.innerHTML = '<div class="school-muted">管理者データを読み込み中...</div>';
   try {
-    const [codesSnap, rankingSnap, settingsSnap, pushTokensSnap, pushNotificationsSnap, usersSnap] = await Promise.all([
+    const [codesSnap, rankingSnap, settingsSnap, usersSnap] = await Promise.all([
       db.collection('schoolCodes').orderBy('createdAt', 'desc').limit(100).get(),
       db.collection(RANKINGS_COLLECTION).limit(500).get(),
       db.collection('appSettings').doc('global').get().catch(() => null),
-      db.collection('pushTokens').where('active', '==', true).limit(1000).get().catch(() => null),
-      db.collection('pushNotifications').orderBy('createdAt', 'desc').limit(5).get().catch(() => null),
       db.collection('users').limit(500).get().catch(() => null)
     ]);
     const rankingRows = rankingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1865,8 +1789,6 @@ async function loadAdminDashboard() {
     const activeCount = codeRows.filter(row => row.active !== false).length;
     const schoolParticipants = Object.values(joinedCounts).reduce((a, b) => a + b, 0);
     const settings = settingsSnap && settingsSnap.exists ? (settingsSnap.data() || {}) : {};
-    const pushTokenCount = pushTokensSnap ? pushTokensSnap.size : 0;
-    const pushRows = pushNotificationsSnap ? pushNotificationsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) : [];
     const userRows = buildAdminUserRows(usersSnap, rankingSnap);
     const suspendedUserCount = userRows.filter(row => row.disabledInApp === true).length;
     wrap.innerHTML = `
@@ -1874,7 +1796,7 @@ async function loadAdminDashboard() {
         <div>
           <div class="admin-hero-kicker">ADMIN DASHBOARD</div>
           <div class="admin-hero-title">管理者メニュー</div>
-          <div class="admin-hero-sub">コード発行・通知・メンテナンスをここからまとめて管理できます。</div>
+          <div class="admin-hero-sub">学校コード・ユーザー・メンテナンスを管理できます。</div>
         </div>
         <button class="admin-refresh-btn" onclick="loadAdminDashboard()">↻ 更新</button>
       </div>
@@ -1884,7 +1806,6 @@ async function loadAdminDashboard() {
         <div class="admin-stat"><div class="admin-stat-icon">✅</div><div class="admin-stat-value">${activeCount}</div><div class="admin-stat-label">有効コード</div></div>
         <div class="admin-stat"><div class="admin-stat-icon">🏆</div><div class="admin-stat-value">${rankingRows.length}</div><div class="admin-stat-label">ランキング参加者</div></div>
         <div class="admin-stat"><div class="admin-stat-icon">🏫</div><div class="admin-stat-value">${schoolParticipants}</div><div class="admin-stat-label">学校コード参加者</div></div>
-        <div class="admin-stat"><div class="admin-stat-icon">🔔</div><div class="admin-stat-value">${pushTokenCount}</div><div class="admin-stat-label">通知許可端末</div></div>
         <div class="admin-stat"><div class="admin-stat-icon">👥</div><div class="admin-stat-value">${userRows.length}</div><div class="admin-stat-label">登録ユーザー</div></div>
         <div class="admin-stat"><div class="admin-stat-icon">⛔</div><div class="admin-stat-value">${suspendedUserCount}</div><div class="admin-stat-label">停止中</div></div>
       </div>
@@ -1910,49 +1831,7 @@ async function loadAdminDashboard() {
           </div>
         </section>
 
-        <section class="admin-panel">
-          <div class="admin-panel-head">
-            <div>
-              <div class="admin-section-title">お知らせ</div>
-              <h3>新機能通知</h3>
-            </div>
-          </div>
-          <div class="admin-settings-grid clean">
-            <label class="admin-field"><span>タイトル</span><input id="admin-setting-notice-title" class="account-input" maxlength="60" value="${escapeHtml(settings.noticeTitle || '')}" placeholder="例：新しいテスト機能を追加しました"></label>
-            <label class="admin-field"><span>本文</span><textarea id="admin-setting-notice-body" class="account-input admin-textarea" maxlength="240" placeholder="短い説明を入力">${escapeHtml(settings.noticeBody || '')}</textarea></label>
-            <button class="btn btn-primary admin-wide-btn" onclick="saveAdminAppSettings()">保存する</button>
-          </div>
-        </section>
-
-        <section class="admin-panel">
-          <div class="admin-panel-head">
-            <div>
-              <div class="admin-section-title">PWA通知</div>
-              <h3>インストール済みアプリへ送信</h3>
-            </div>
-          </div>
-          <div class="admin-settings-grid clean">
-            <label class="admin-field"><span>通知タイトル</span><input id="admin-push-title" class="account-input" maxlength="60" placeholder="例：新しい単語テストを追加しました"></label>
-            <label class="admin-field"><span>通知本文</span><textarea id="admin-push-body" class="account-input admin-textarea" maxlength="180" placeholder="通知に表示する短い本文"></textarea></label>
-            <button class="btn btn-primary admin-wide-btn" onclick="sendAdminPushNotification()">通知を送信</button>
-          </div>
-          <div class="admin-note">通知は、アプリをインストールして通知を許可した端末だけに送られます。</div>
-        </section>
       </div>
-
-      <section class="admin-panel admin-list-panel">
-        <div class="admin-panel-head">
-          <div>
-            <div class="admin-section-title">送信履歴</div>
-            <h3>直近の通知</h3>
-          </div>
-        </div>
-        <div class="admin-code-dashboard-list">
-          ${pushRows.length ? pushRows.map(row => `<div class="admin-code-row admin-list-row"><div><div class="school-code-main">${escapeHtml(row.title || '通知')}</div><div class="school-code-sub">${escapeHtml(row.status || 'queued')} ／ 成功 ${Number(row.successCount || 0)} 件 ／ 失敗 ${Number(row.failureCount || 0)} 件</div></div></div>`).join('') : '<div class="school-muted admin-empty">送信履歴はまだありません。</div>'}
-        </div>
-      </section>
-
-
 
       <section class="admin-panel admin-list-panel admin-user-panel">
         <div class="admin-panel-head">
@@ -1998,29 +1877,7 @@ async function loadAdminDashboard() {
     `;
   } catch (e) {
     console.warn('loadAdminDashboard error:', e);
-    wrap.innerHTML = '<div class="school-muted">管理者データを取得できませんでした。Firestoreルールを確認してください。</div>';
-  }
-}
-
-async function saveAdminAppSettings() {
-  if (!auth.currentUser || !isSchoolAdmin()) {
-    showSyncStatus('管理者のみ設定変更できます', true);
-    return;
-  }
-  const title = String(document.getElementById('admin-setting-notice-title')?.value || '').trim().slice(0, 60);
-  const body = String(document.getElementById('admin-setting-notice-body')?.value || '').trim().slice(0, 240);
-  try {
-    await db.collection('appSettings').doc('global').set({
-      noticeTitle: title,
-      noticeBody: body,
-      updatedByUid: auth.currentUser.uid,
-      updatedByEmail: auth.currentUser.email || '',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    showSyncStatus('管理者設定を保存しました');
-  } catch (e) {
-    console.warn('saveAdminAppSettings error:', e);
-    showSyncStatus('設定保存に失敗しました', true);
+    wrap.innerHTML = '<div class="school-muted">管理者データを取得できませんでした。時間をおいて再度お試しください。</div>';
   }
 }
 
@@ -2045,21 +1902,6 @@ function renderSchoolCodeSettings() {
       </div>
       <div class="account-help">ログインなしでも端末に保存されます。ログイン中はアカウントにも保存されます。</div>
     </div>
-    <div class="account-card push-settings-card">
-      <div class="ranking-meta-title">インストール済みアプリ通知</div>
-      <div class="school-status-box ${isInstalledPwa() ? 'joined' : ''}">
-        <div class="school-status-icon">🔔</div>
-        <div>
-          <div class="school-status-title">${escapeHtml(getPushStatusLabel())}</div>
-          <div class="school-status-sub">新機能や重要なお知らせを、アプリをインストールしている端末だけに通知します。</div>
-        </div>
-      </div>
-      <div class="school-join-row">
-        <button class="btn btn-primary" onclick="enableInstalledPushNotifications()">通知を有効化</button>
-        <button class="btn btn-secondary" onclick="disableInstalledPushNotifications()">通知を停止</button>
-      </div>
-      <div class="account-help">ブラウザで開いているだけの場合は通知対象になりません。ホーム画面に追加・インストール後に有効化してください。</div>
-    </div>
     <div class="account-card school-admin-card">
       <div class="admin-card-header"><div><div class="ranking-meta-title">管理者用コード発行</div><div class="admin-card-sub">学校・クラスごとの参加コードを作成できます。</div></div><span class="admin-card-mark">管理者</span></div>
       ${admin ? `
@@ -2071,6 +1913,12 @@ function renderSchoolCodeSettings() {
           </div>
           <button class="btn btn-primary" onclick="issueSchoolCode()">コードを発行</button>
         </div>
+        <div class="school-logo-admin">
+          <div class="account-label">学校ロゴ</div>
+          <p class="account-help">学校IDを入力してロゴを登録すると、その学校でログインした人のヘッダーに表示されます。横長・正方形の画像に対応します。</p>
+          <input id="admin-school-logo-code" class="account-input" placeholder="ロゴを設定する学校ID" maxlength="20">
+          <div class="school-logo-actions"><label class="avatar-picker">画像を選択<input type="file" accept="image/jpeg,image/png,image/webp" onchange="saveSchoolLogo(this)"></label><button type="button" class="btn btn-secondary" onclick="removeSchoolLogo()">ロゴを削除</button></div>
+        </div>
         <div class="school-issued-head">発行済みコード</div>
         <div id="admin-school-code-list" class="school-code-list"></div>
         <div class="school-issued-head">クラス別・今回の単語テスト範囲</div>
@@ -2078,21 +1926,12 @@ function renderSchoolCodeSettings() {
           <input id="admin-class-school" class="account-input" placeholder="発行済みの学校ID" maxlength="20">
           <input id="admin-class-id" class="account-input" placeholder="クラスID（学校共通なら空欄）" maxlength="20">
           <input id="admin-class-name" class="account-input" placeholder="クラス名 例：2年A組（任意）" maxlength="40">
-          <input id="admin-class-start" class="account-input" type="number" min="1" max="339" placeholder="開始番号">
-          <input id="admin-class-end" class="account-input" type="number" min="1" max="339" placeholder="終了番号">
+          <input id="admin-class-start" class="account-input" type="number" min="1" max="2027" placeholder="開始番号">
+          <input id="admin-class-end" class="account-input" type="number" min="1" max="2027" placeholder="終了番号">
           <button type="button" class="btn btn-primary" onclick="saveClassTestRange()">このクラスの範囲を保存</button>
         </div>
-        <div class="school-issued-head">学習リマインドを設定</div>
-        <p class="account-help">上の学校ID・クラスIDに対し、毎週の通知とテスト前日の通知を設定します。時刻は日本時間です。</p>
-        <div class="admin-notice-schedule-form">
-          <label>曜日 <select id="admin-notice-weekday" class="account-input"><option value="1">月曜</option><option value="2">火曜</option><option value="3">水曜</option><option value="4">木曜</option><option value="5">金曜</option><option value="6">土曜</option><option value="0">日曜</option></select></label>
-          <label>時刻 <select id="admin-notice-hour" class="account-input">${Array.from({length:16},(_,i)=>`<option value="${i+7}" ${i===11?'selected':''}>${i+7}:00</option>`).join('')}</select></label>
-          <label>テスト日（任意） <input id="admin-notice-test-date" type="date" class="account-input"></label>
-          <button type="button" class="btn btn-primary" onclick="saveStudySchedule()">通知予定を保存</button>
-          <button type="button" class="btn btn-secondary" onclick="disableStudySchedule()">定期通知を停止</button>
-        </div>
         <div class="admin-dashboard-card">
-          
+
           <div id="admin-dashboard-body" class="admin-dashboard-body"></div>
         </div>
       ` : `
@@ -2100,60 +1939,6 @@ function renderSchoolCodeSettings() {
       `}
     </div>
   `;
-}
-
-function hasSeenFeatureNotice() {
-  try { return localStorage.getItem(FEATURE_NOTICE_SEEN_KEY) === '1'; } catch (e) { return false; }
-}
-
-function markFeatureNoticeSeen() {
-  try { localStorage.setItem(FEATURE_NOTICE_SEEN_KEY, '1'); } catch (e) {}
-  updateFeatureNoticeBadge();
-}
-
-function updateFeatureNoticeBadge() {
-  const dot = document.getElementById('feature-notice-dot');
-  const fab = document.getElementById('feature-notice-fab');
-  const unseen = !hasSeenFeatureNotice();
-  if (dot) dot.classList.toggle('show', unseen);
-  if (fab) fab.classList.toggle('has-unread', unseen);
-}
-
-function renderFeatureNoticeList() {
-  const list = document.getElementById('feature-notice-list');
-  if (!list) return;
-  list.innerHTML = FEATURE_NOTICES.map(item => `
-    <div class="feature-notice-item">
-      <div class="feature-notice-date">${escapeHtml(item.date)}</div>
-      <div class="feature-notice-item-title">${escapeHtml(item.title)}</div>
-      <div class="feature-notice-item-body">${escapeHtml(item.body)}</div>
-    </div>
-  `).join('');
-}
-
-function showFeatureNotice(force = false) {
-  const modal = document.getElementById('feature-notice-modal');
-  if (!modal) return;
-  const welcome = document.getElementById('welcome-modal');
-  if (!force && welcome && welcome.classList.contains('show')) return;
-  if (!force && hasSeenFeatureNotice()) return;
-  renderFeatureNoticeList();
-  modal.classList.add('show');
-  modal.setAttribute('aria-hidden', 'false');
-  markFeatureNoticeSeen();
-}
-
-function showFeatureNoticeIfNeeded() {
-  updateFeatureNoticeBadge();
-  showFeatureNotice(false);
-}
-
-function closeFeatureNotice() {
-  const modal = document.getElementById('feature-notice-modal');
-  if (!modal) return;
-  modal.classList.remove('show');
-  modal.setAttribute('aria-hidden', 'true');
-  markFeatureNoticeSeen();
 }
 
 function hasAcceptedWelcome() {
@@ -2209,7 +1994,7 @@ function renderOnboarding() {
   if (!modal) return;
   modal.classList.add('show');
   modal.setAttribute('aria-hidden', 'false');
-  document.getElementById('onboarding-progress').innerHTML = Array.from({length:5}, (_, i) => `<span class="${i <= onboardingStep ? 'current' : ''}"></span>`).join('');
+  document.getElementById('onboarding-progress').innerHTML = Array.from({length:4}, (_, i) => `<span class="${i <= onboardingStep ? 'current' : ''}"></span>`).join('');
   const title = document.getElementById('onboarding-title');
   const description = document.getElementById('onboarding-description');
   const extra = document.getElementById('onboarding-extra');
@@ -2221,34 +2006,25 @@ function renderOnboarding() {
     description.textContent = 'メールで新規登録、Google、学校IDで利用できます。登録は後からでも可能です。';
     extra.textContent = 'メールで登録する場合は、次の画面でメールアドレスとパスワードを入力し「新規登録」を押してください。';
     actions.innerHTML = '<button type="button" class="welcome-login-btn" onclick="openOnboardingAuth()">アカウントを作成・ログイン</button><button type="button" class="onboarding-skip" onclick="advanceOnboarding()">後で設定する</button>';
-  } else if (onboardingStep === 1) {
-    label.textContent = 'STEP 2 / 通知';
-    title.textContent = '学習のお知らせ';
-    description.textContent = '学校のテスト範囲の変更や学習リマインドを通知できます。設定しなくても学習とアプリ内通知は利用できます。';
-    extra.textContent = getPushStatusLabel();
-    actions.innerHTML = '<button type="button" class="welcome-login-btn" onclick="enableOnboardingNotifications()">通知を有効にする</button><button type="button" class="onboarding-skip" onclick="advanceOnboarding()">後で設定する</button>';
   } else {
-    const index = onboardingStep - 2;
+    const index = onboardingStep - 1;
     label.textContent = `STEP ${onboardingStep + 1} / 使い方`;
     title.textContent = onboardingTutorial[index][0];
     description.textContent = onboardingTutorial[index][1];
     extra.textContent = `${index + 1} / ${onboardingTutorial.length}`;
-    actions.innerHTML = `<button type="button" class="welcome-login-btn" onclick="advanceOnboarding()">${onboardingStep === 4 ? '学習を始める' : '次へ'}</button>`;
+    actions.innerHTML = `<button type="button" class="welcome-login-btn" onclick="advanceOnboarding()">${onboardingStep === 3 ? '学習を始める' : '次へ'}</button>`;
   }
 }
 function openOnboardingAuth() {
   onboardingAuthOpen = true;
+  try { localStorage.setItem(ONBOARDING_COMPLETE_KEY, '1'); } catch (e) {}
   const modal = document.getElementById('onboarding-modal');
   modal.classList.remove('show');
   modal.setAttribute('aria-hidden', 'true');
   showAuthModal();
 }
-async function enableOnboardingNotifications() {
-  await enableInstalledPushNotifications();
-  if (onboardingStep === 1) document.getElementById('onboarding-extra').textContent = getPushStatusLabel();
-}
 function advanceOnboarding() {
-  if (onboardingStep < 4) { onboardingStep++; renderOnboarding(); return; }
+  if (onboardingStep < 3) { onboardingStep++; renderOnboarding(); return; }
   try { localStorage.setItem(ONBOARDING_COMPLETE_KEY, '1'); } catch (e) {}
   const modal = document.getElementById('onboarding-modal');
   modal.classList.remove('show');
@@ -2262,9 +2038,20 @@ async function acceptWelcomeAndLogin() {
 }
 
 function renderAuthFab() {
+  const user = auth.currentUser;
+  profileAvatarData = user ? getStoredProfileAvatar(user.uid) : getStoredProfileAvatar('guest');
+  const displayName = user ? getPublicNickname(user) : 'ログイン';
+  const headerButton = document.getElementById('header-account-button');
+  if (headerButton) {
+    headerButton.innerHTML = profileAvatarData
+      ? `<img class="header-account-avatar" src="${profileAvatarData}" alt="">`
+      : user
+        ? `<span class="header-account-avatar-fallback">${escapeHtml(getInitials(displayName))}</span>`
+        : '<span class="header-account-avatar-fallback"><svg class="header-login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></span>';
+    headerButton.setAttribute('aria-label', user ? `${displayName}さんのマイページ` : 'ログイン');
+  }
   const el = document.getElementById('auth-fab');
   if (!el) return;
-  const user = auth.currentUser;
   if (!user) {
     el.innerHTML = `
       <button class="auth-pill auth-pill-login" onclick="login()" title="ログイン">
@@ -2377,12 +2164,62 @@ async function loadAccountProfile() {
     const data = snap.exists ? (snap.data() || {}) : {};
     const remoteNickname = String(data.profileNickname || data.nickname || '').trim();
     accountProfile = { nickname: remoteNickname };
+    profileAvatarData = getStoredProfileAvatar(auth.currentUser.uid);
     if (remoteNickname && !getStoredNickname()) setStoredNickname(remoteNickname);
     if (data.schoolCode) setLocalSchoolCode(data.schoolCode, data.schoolName || '');
   } catch (e) {
     console.warn('loadAccountProfile error:', e);
   }
   return accountProfile;
+}
+
+function getStoredProfileAvatar(uid = auth.currentUser?.uid || 'guest') {
+  try {
+    const value = localStorage.getItem(PROFILE_AVATAR_KEY_PREFIX + uid) || '';
+    return /^data:image\/(?:webp|png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value) ? value : '';
+  } catch (e) { return ''; }
+}
+
+async function changeProfileAvatar(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!auth.currentUser) {
+    showSyncStatus('画像を設定するにはログインしてください', true);
+    input.value = '';
+    return;
+  }
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    showSyncStatus('JPEG・PNG・WebP形式の5MB以下の画像を選んでください', true);
+    input.value = '';
+    return;
+  }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 320 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const compressed = canvas.toDataURL('image/webp', 0.78);
+    if (compressed.length > 280000) throw new Error('image_too_large');
+    localStorage.setItem(PROFILE_AVATAR_KEY_PREFIX + auth.currentUser.uid, compressed);
+    profileAvatarData = compressed;
+    renderAuthFab();
+    renderAccountSettings();
+    showSyncStatus('プロフィール画像をこの端末に保存しました');
+  } catch (e) {
+    console.warn('Profile image could not be prepared:', e);
+    showSyncStatus('画像を読み込めませんでした。別の画像を選んでください', true);
+  } finally {
+    input.value = '';
+  }
+}
+
+function renderProfileAvatar(name, className = 'account-avatar-large') {
+  return profileAvatarData
+    ? `<img class="${className} profile-avatar-image" src="${profileAvatarData}" alt="プロフィール画像">`
+    : `<div class="${className}">${escapeHtml(getInitials(name))}</div>`;
 }
 
 async function saveAccountNickname() {
@@ -2435,9 +2272,9 @@ async function fetchLeaderboard() {
     return [];
   }
   try {
-    const snap = await db.collection(RANKINGS_COLLECTION).limit(100).get();
+    const activeSchoolCode = getSchoolCode() || null;
+    const snap = await db.collection(RANKINGS_COLLECTION).where('schoolCode', '==', activeSchoolCode).limit(100).get();
     leaderboardCache = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const activeSchoolCode = getSchoolCode();
     if (activeSchoolCode) {
       leaderboardCache = leaderboardCache.filter(row => normalizeSchoolCode(row.schoolCode) === activeSchoolCode);
     }
@@ -2575,99 +2412,67 @@ function renderRoleAccessSettingsCard(user) {
   `;
 }
 
+let accountSettingsTab = 'profile';
+
+function setAccountSettingsTab(tab) {
+  if (!['profile', 'study', 'school'].includes(tab)) return;
+  accountSettingsTab = tab;
+  renderAccountSettings();
+}
+
 function renderAccountSettings() {
   const el = document.getElementById('account-settings-body');
   if (!el) return;
   const user = auth.currentUser;
-  if (!user) {
-    el.innerHTML = `
-      <div class="account-layout">
-        <div class="account-card">
-          <div class="account-hero">
-            <div class="account-avatar-large">↗</div>
-            <div>
-              <div class="account-title-main">ログインして学習データを同期</div>
-              <div class="account-sub-main">ランキングの閲覧・参加、クラウド保存、ニックネーム設定にはログインが必要です。</div>
-            </div>
-          </div>
-          <div class="account-actions">
-            ${activeClassAssignment?.local ? '<button class="btn btn-secondary" onclick="leaveLocalSchool()">学校からログアウト</button>' : ''}
-            <button class="btn btn-primary" onclick="showAuthModal()">ログイン / 新規登録</button>
-            <button class="btn btn-secondary" onclick="startWithoutLogin();showHome();">ログインせずに始める</button>
-            <button class="btn btn-secondary" onclick="showHome()">ホームへ戻る</button>
-          </div>
-        </div>
-        <details class="account-card account-details"><summary>プライバシーと詳細設定</summary>
-          <div class="ranking-meta-title">プライバシー</div>
-          <div class="account-privacy-list">
-            <div class="account-privacy-item"><span class="account-privacy-icon">🔒</span><span>ランキングはログイン中のみ閲覧できます。</span></div>
-            <div class="account-privacy-item"><span class="account-privacy-icon">🏷️</span><span>ランキングにはニックネームだけを表示します。</span></div>
-            <div class="account-privacy-item"><span class="account-privacy-icon">🙈</span><span>本名・メール・Googleプロフィール写真は表示しません。</span></div>
-          </div>
-          ${renderVoiceSettingsCard()}
-          ${renderSchoolCodeSettings()}
-        </details>
-      </div>`;
-    setTimeout(() => { loadIssuedSchoolCodes(); loadAdminDashboard(); }, 0);
-    return;
+  const signedInUser = !!user;
+  const nickname = !user ? '' : user.isAnonymous
+    ? (getSchoolName() ? `${getSchoolName()}の学習者` : '学習者')
+    : getPublicNickname(user);
+  const tabs = [
+    ['profile', 'プロフィール設定'],
+    ['study', '単語学習設定'],
+    ['school', '学校・アカウント']
+  ];
+  const tabNav = `<nav class="account-settings-tabs" aria-label="マイページ設定">${tabs.map(([id, label]) => `<button type="button" class="account-tab-button${accountSettingsTab === id ? ' active' : ''}" aria-pressed="${accountSettingsTab === id}" onclick="setAccountSettingsTab('${id}')">${label}</button>`).join('')}</nav>`;
+
+  let panel = '';
+  if (accountSettingsTab === 'profile') {
+    if (!signedInUser) {
+      panel = `
+        <section class="account-card account-login-prompt">
+          <div class="account-login-mark" aria-hidden="true">👤</div>
+          <h2>ログインしよう</h2>
+          <p>ログインすると、学習記録の同期やランキング、プロフィール設定が使えます。</p>
+          <button class="btn btn-primary" type="button" onclick="login()">ログイン・新規登録へ</button>
+          <button class="btn btn-secondary" type="button" onclick="showHome()">学習に戻る</button>
+        </section>`;
+    } else {
+      const stats = getTotalStats();
+      const answered = leaderboardStats.totalAnswered || 0;
+      const accuracy = answered > 0 ? Math.round((leaderboardStats.totalCorrect / answered) * 1000) / 10 : 0;
+      panel = `
+        <section class="account-card account-profile-card">
+          <div class="account-hero">${renderProfileAvatar(nickname)}<div><h2 class="account-title-main">プロフィール設定</h2><p class="account-sub-main">表示名とプロフィール画像を管理できます。</p></div></div>
+          <div class="account-field"><label class="account-label" for="account-nickname-input">表示名</label><input id="account-nickname-input" class="account-input" maxlength="16" value="${escapeHtml(nickname)}" placeholder="ランキングに表示する名前"><div class="account-help">最大16文字。ランキングに表示されます。</div></div>
+          <div class="account-field"><div class="account-label">プロフィール画像</div><label class="avatar-picker">写真を選ぶ<input type="file" accept="image/jpeg,image/png,image/webp" onchange="changeProfileAvatar(this)"></label><div class="account-help">画像はこの端末内に保存され、ランキングには表示されません。</div></div>
+          <div class="account-actions"><button class="btn btn-primary" onclick="saveAccountNickname()">プロフィールを保存</button><button class="btn btn-secondary" onclick="logout()">ログアウト</button></div>
+        </section>
+        <section class="account-card"><div class="ranking-meta-title">学習の状況</div><div class="account-mini-stat">
+          <div class="account-mini-box"><div class="account-mini-value">${stats['◎'] || 0}</div><div class="account-mini-label">習得語数</div></div>
+          <div class="account-mini-box"><div class="account-mini-value">${myLeaderboardRank ? '#' + myLeaderboardRank : '—'}</div><div class="account-mini-label">順位</div></div>
+          <div class="account-mini-box"><div class="account-mini-value">${leaderboardStats.totalCorrect || 0}</div><div class="account-mini-label">正解数</div></div>
+          <div class="account-mini-box"><div class="account-mini-value">${accuracy}%</div><div class="account-mini-label">正答率</div></div>
+        </div></section>`;
+    }
+  } else if (accountSettingsTab === 'study') {
+    panel = `<section class="account-card"><h2 class="account-panel-title">単語学習設定</h2><p class="account-help">学習時の設定を変更できます。</p>${renderVoiceSettingsCard()}</section>`;
+  } else {
+    panel = `<section class="account-card"><h2 class="account-panel-title">学校との紐づけ</h2><p class="account-help">学校IDを登録すると、学校別ランキングやクラスの出題範囲が使えます。ログイン中は所属をアカウントに保存します。</p>${renderSchoolCodeSettings()}${signedInUser ? renderRoleAccessSettingsCard(user) : '<button class="btn btn-primary" type="button" onclick="login()">学校をアカウントに登録するにはログイン</button>'}</section>`;
   }
 
-  const nick = getPublicNickname(user);
-  const stats = getTotalStats();
-  const answered = leaderboardStats.totalAnswered || 0;
-  const accuracy = answered > 0 ? Math.round((leaderboardStats.totalCorrect / answered) * 1000) / 10 : 0;
-  el.innerHTML = `
-    <div class="account-layout">
-      <div class="account-card">
-        <div class="account-hero">
-          <div class="account-avatar-large">${escapeHtml(getInitials(nick))}</div>
-          <div>
-            <div class="account-title-main">${escapeHtml(nick)}</div>
-            <div class="account-sub-main">ランキング表示名とログイン状態を管理できます。</div>
-          </div>
-        </div>
-        <details class="account-details"><summary>プロフィールとアカウントを管理</summary><div class="account-field">
-          <div class="account-label">ランキング用ニックネーム</div>
-          <input id="account-nickname-input" class="account-input" maxlength="16" value="${escapeHtml(nick)}" placeholder="例：古文単語マスター">
-          <div class="account-help">最大16文字。本名ではなく、公開してもよい名前をおすすめします。</div>
-        </div>
-        <div class="account-actions">
-          <button class="btn btn-primary" onclick="saveAccountNickname()">保存する</button>
-          <button class="btn btn-secondary" onclick="showRanking()">ランキングを見る</button>
-          ${isSchoolAdmin(user) ? '<button class="btn btn-secondary" onclick="location.href=\'./admin.html\'">管理者ページ</button>' : ''}
-          ${String(accountProfile.role || '').trim() === 'teacher' || isSchoolAdmin(user) ? '<button class="btn btn-secondary" onclick="location.href=\'./teacher.html\'">先生用ページ</button>' : ''}
-          <button class="btn btn-secondary" onclick="logout()">ログアウト</button>
-        </div></details>
-      </div>
-      <div class="account-card">
-        <div class="ranking-meta-title">あなたの状態</div>
-        <div class="account-mini-stat">
-          <div class="account-mini-box"><div class="account-mini-value">${stats['◎'] || 0}</div><div class="account-mini-label">習得語数 ◎</div></div>
-          <div class="account-mini-box"><div class="account-mini-value">${myLeaderboardRank ? '#' + myLeaderboardRank : '—'}</div><div class="account-mini-label">現在順位</div></div>
-          <div class="account-mini-box"><div class="account-mini-value">${leaderboardStats.totalCorrect || 0}</div><div class="account-mini-label">累計正解数</div></div>
-          <div class="account-mini-box"><div class="account-mini-value">${accuracy}%</div><div class="account-mini-label">正答率</div></div>
-        </div>
-        <div class="account-privacy-list">
-          <div class="account-privacy-item"><span class="account-privacy-icon">🔒</span><span>本名・メールアドレス・Google写真はランキングに出しません。</span></div>
-          <div class="account-privacy-item"><span class="account-privacy-icon">☁️</span><span>ログイン中は学習データをクラウドに保存します。</span></div>
-        </div>
-      </div>
-      <details class="account-card account-details"><summary>学習・学校・権限の設定</summary>
-        ${renderRoleAccessSettingsCard(user)}
-        ${renderVoiceSettingsCard()}
-        ${renderSchoolCodeSettings()}
-      </details>
-    </div>`;
-  setTimeout(() => { loadIssuedSchoolCodes(); loadAdminDashboard(); }, 0);
+  el.innerHTML = `<div class="account-greeting"><span class="account-greeting-kicker">MY PAGE</span><h1>${signedInUser ? `こんにちは、${escapeHtml(nickname)}さん` : 'ログインしよう'}</h1><p>${signedInUser ? '学習の設定やプロフィールをここで管理できます。' : 'ログインすると、学習記録を保存して続きから学べます。'}</p></div>${tabNav}<div class="account-tab-panel" role="region" aria-live="polite">${panel}</div>`;
+  if (signedInUser && accountSettingsTab === 'school') setTimeout(() => { loadIssuedSchoolCodes(); loadAdminDashboard(); }, 0);
 }
-
-
-// =========================================================
-// STORAGE
-// =========================================================
-const STORAGE_KEY = 'kobun_progress_v1';
-let cloudSaveTimer = null;
-
 function loadProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -2758,6 +2563,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   const studying = id === 'screen-quiz';
   document.body.classList.toggle('is-quiz-active', studying);
+  document.body.classList.toggle('is-studying', studying);
   document.getElementById('mobile-bottom-nav')?.classList.toggle('hidden', studying);
 }
 
@@ -2782,11 +2588,7 @@ function relocateDashboardPanels() {
   });
 }
 
-function showSearch() {
-  relocateDashboardPanels();
-  showScreen('screen-search');
-  document.getElementById('home-word-search-input')?.focus();
-}
+function showSearch() { showBookmarks(); document.getElementById('home-word-search-input')?.focus(); }
 
 function showProgress() {
   showResultsDashboard();
@@ -2803,8 +2605,7 @@ async function showResultsDashboard() {
 }
 
 function showAccountTab() {
-  if (auth.currentUser || activeClassAssignment?.local) showAccountSettings();
-  else login();
+  showAccountSettings();
 }
 
 function showSearchWord(id) {
@@ -2814,152 +2615,10 @@ function showSearchWord(id) {
   document.getElementById('sets-grid')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-const NOTICE_READ_KEY = 'systan_notice_read_v1';
-const NOTICE_CACHE_KEY = 'systan_notice_cache_v1';
-const PUSH_ENABLED_KEY = 'systan_push_enabled_v1';
-let schoolNotices = [];
-let noticeUnsubscribe = null;
-let noticeAudience = '';
-let noticeError = '';
-function getReadNoticeIds() {
-  try { return new Set(JSON.parse(localStorage.getItem(NOTICE_READ_KEY + '_' + getSchoolCode()) || '[]')); }
-  catch(e) { return new Set(); }
-}
-function saveReadNoticeIds(ids) {
-  try { localStorage.setItem(NOTICE_READ_KEY + '_' + getSchoolCode(), JSON.stringify([...ids].slice(-300))); } catch(e) {}
-}
-function getCachedNotices() {
-  try { return JSON.parse(localStorage.getItem(NOTICE_CACHE_KEY + '_' + getSchoolCode()) || '[]'); }
-  catch(e) { return []; }
-}
-function noticeMatchesClass(item) {
-  return !item.classId || item.classId === (activeClassAssignment?.classId || '');
-}
-function updateNoticeBadge() {
-  const el = document.getElementById('notice-nav-badge');
-  if (!el) return;
-  const read = getReadNoticeIds();
-  const count = schoolNotices.filter(n => noticeMatchesClass(n) && !read.has(n.id)).length;
-  el.textContent = count > 9 ? '9+' : String(count);
-  el.hidden = count === 0;
-}
-function renderNoticeInbox() {
-  const list = document.getElementById('notice-inbox-list');
-  const status = document.getElementById('notice-push-status');
-  if (!list) return;
-  if (status) status.textContent = getPushStatusLabel();
-  if (!getSchoolCode()) {
-    list.innerHTML = '<div class="notice-empty">学校IDで参加すると、その学校の通知をここで確認できます。</div>';
-    updateNoticeBadge(); return;
-  }
-  const read = getReadNoticeIds();
-  const items = schoolNotices.filter(noticeMatchesClass).slice().sort((a,b) => (b.createdAtMillis || 0) - (a.createdAtMillis || 0)).slice(0,60);
-  list.innerHTML = `${noticeError ? `<div class="notice-error">${escapeHtml(noticeError)}</div>` : ''}${items.length ? items.map(n => `
-    <button class="notice-item ${read.has(n.id) ? '' : 'unread'}" type="button" onclick="openSchoolNotice('${escapeHtml(n.id)}')">
-      <span class="notice-item-top"><span>${n.type === 'range_changed' ? '範囲変更' : n.type === 'test_eve' ? 'テスト前日' : '学習リマインド'}</span><span>${n.createdAtMillis ? new Date(n.createdAtMillis).toLocaleDateString('ja-JP') : ''}</span></span>
-      <strong>${escapeHtml(n.title)}</strong><span>${escapeHtml(n.body)}</span>
-    </button>`).join('') : '<div class="notice-empty">届いている通知はまだありません。</div>'}`;
-  updateNoticeBadge();
-}
-function listenSchoolNotices() {
-  const schoolId = getSchoolCode();
-  const audience = `${schoolId}|${activeClassAssignment?.classId || ''}`;
-  if (noticeAudience === audience) { renderNoticeInbox(); return; }
-  if (noticeUnsubscribe) { noticeUnsubscribe(); noticeUnsubscribe = null; }
-  noticeAudience = audience;
-  schoolNotices = schoolId ? getCachedNotices() : [];
-  noticeError = '';
-  renderNoticeInbox();
-  if (!schoolId || !navigator.onLine) return;
-  noticeUnsubscribe = db.collection('schoolNotices').where('schoolId','==',schoolId).limit(100).onSnapshot(snap => {
-    schoolNotices = snap.docs.map(doc => ({id:doc.id,...doc.data(),createdAtMillis:doc.data().createdAt?.toMillis?.() || 0}));
-    try { localStorage.setItem(NOTICE_CACHE_KEY + '_' + schoolId, JSON.stringify(schoolNotices.slice(0,80))); } catch(e) {}
-    noticeError = '';
-    renderNoticeInbox();
-  },error => { console.warn('listenSchoolNotices error:',error);
-    noticeError = '学校からの通知を取得できません。Firestoreルールと通信状態を確認してください。';renderNoticeInbox(); });
-}
-function showNotifications() {
-  listenSchoolNotices();
-  showScreen('screen-notifications');
-  renderNoticeInbox();
-}
-function openSchoolNotice(id) {
-  const read = getReadNoticeIds(); read.add(id); saveReadNoticeIds(read);
-  const item = schoolNotices.find(n => n.id === id);
-  if (item && Number.isInteger(item.startId) && Number.isInteger(item.endId) &&
-      item.startId >= WORDS[0].id && item.endId <= WORDS[WORDS.length - 1].id && item.startId <= item.endId) {
-    setQuizRanges[0] = {startId:item.startId,endId:item.endId};
-    showHome();
-    document.getElementById('sets-grid')?.scrollIntoView({behavior:'smooth',block:'start'});
-  } else renderNoticeInbox();
-  updateNoticeBadge();
-}
-function markAllSchoolNoticesRead() {
-  const ids = getReadNoticeIds();
-  schoolNotices.filter(noticeMatchesClass).forEach(item => ids.add(item.id));
-  saveReadNoticeIds(ids); renderNoticeInbox();
-}
-async function syncPushAudience() {
-  try {
-    if (localStorage.getItem(PUSH_ENABLED_KEY) !== '1' || !messaging || !isInstalledPwa() ||
-        Notification.permission !== 'granted' || !FCM_VAPID_KEY || FCM_VAPID_KEY.includes('PASTE_YOUR')) return;
-    const registration = await navigator.serviceWorker.ready;
-    const token = await messaging.getToken({vapidKey:FCM_VAPID_KEY,serviceWorkerRegistration:registration});
-    if (!token) return;
-    const clientId = getPushClientId();
-    await db.collection('pushTokens').doc(clientId).set({
-      clientId,token,installedOnly:true,active:true,
-      schoolId:getSchoolCode() || null, classId:activeClassAssignment?.classId || '',
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    },{merge:true});
-  } catch(e) { console.warn('syncPushAudience error:',e); }
-}
-
-async function saveStudySchedule() {
-  if (!isSchoolAdmin()) { showSyncStatus('管理者のみ設定できます',true); return; }
-  const schoolId = normalizeSchoolCode(document.getElementById('admin-class-school')?.value);
-  const classId = normalizeClassId(document.getElementById('admin-class-id')?.value);
-  const weekday = Number(document.getElementById('admin-notice-weekday')?.value);
-  const hour = Number(document.getElementById('admin-notice-hour')?.value);
-  const testDate = String(document.getElementById('admin-notice-test-date')?.value || '');
-  if (!schoolId || !Number.isInteger(weekday) || weekday < 0 || weekday > 6 ||
-      !Number.isInteger(hour) || hour < 7 || hour > 22 ||
-      testDate && !/^\d{4}-\d{2}-\d{2}$/.test(testDate)) {
-    showSyncStatus('学校ID・曜日・時刻を確認してください',true);return;
-  }
-  try {
-    const school = await db.collection('schoolCodes').doc(schoolId).get();
-    if (!school.exists || school.data()?.active === false) throw new Error('有効な学校IDを入力してください');
-    const target = classId ? await db.collection('schoolCodes').doc(schoolId).collection('classes').doc(classId).get() : school;
-    if (!target.exists || target.data()?.active === false) throw new Error('クラスIDが未登録です');
-    const {startId,endId} = target.data();
-    if (!Number.isInteger(startId) || !Number.isInteger(endId) || startId < WORDS[0].id || endId > WORDS[WORDS.length-1].id || startId > endId) {
-      throw new Error('先にテスト範囲を保存してください');
-    }
-    await db.collection('studySchedules').doc(`${schoolId}__${classId || 'ALL'}`).set({
-      schoolId,classId,weekday,hour,startId,endId,testDate,
-      testReminder:!!testDate,active:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    },{merge:true});
-    showSyncStatus('毎週の通知予定を保存しました');
-  } catch(e) { console.warn('saveStudySchedule error:',e);showSyncStatus(e.message || '通知予定を保存できませんでした',true); }
-}
-async function disableStudySchedule() {
-  if (!isSchoolAdmin()) return;
-  const schoolId = normalizeSchoolCode(document.getElementById('admin-class-school')?.value);
-  const classId = normalizeClassId(document.getElementById('admin-class-id')?.value);
-  if (!schoolId) { showSyncStatus('学校IDを入力してください',true);return; }
-  try {
-    await db.collection('studySchedules').doc(`${schoolId}__${classId || 'ALL'}`).set({active:false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    showSyncStatus('定期通知を停止しました');
-  } catch(e) { console.warn('disableStudySchedule error:',e);showSyncStatus('通知予定を停止できませんでした',true); }
-}
-
 function showHome() {
   relocateDashboardPanels();
   renderHome();
   renderPwaInvite();
-  listenSchoolNotices();
   const grid = document.getElementById('sets-grid');
   const picker = document.querySelector('#screen-set > .content');
   if (picker && grid) grid.replaceChildren(picker);
@@ -3027,7 +2686,7 @@ async function shareWordSelection() {
   url.searchParams.set('mode', selectedMode);
   url.searchParams.set('retest', selectedRetest);
   try {
-    if (navigator.share) await navigator.share({ title: '古文単語マスター：単語選択', url: url.href });
+    if (navigator.share) await navigator.share({ title: 'ことのは単語：単語選択', url: url.href });
     else if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(url.href); alert('共有URLをコピーしました'); }
     else prompt('共有URLをコピーしてください', url.href);
   } catch (error) { if (error.name !== 'AbortError') prompt('共有URLをコピーしてください', url.href); }
@@ -3440,7 +3099,10 @@ function renderQuestion() {
   if (quiz.idx >= quiz.words.length) { finishQuiz(); return; }
   const word = quiz.words[quiz.idx];
   quiz.answered = false;
-  if (isAutoVoiceEnabled()) setTimeout(() => speakWordText(word.en), 180);
+  if (isAutoVoiceEnabled()) {
+    const asksForEnglish = quiz.mode === 1;
+    setTimeout(() => speakWordText(asksForEnglish ? word.en : word.jp, asksForEnglish ? 'en-US' : 'ja-JP'), 180);
+  }
   updateQuizProgress();
 
   document.getElementById('answer-reveal-area').style.display = 'none';
@@ -3488,7 +3150,7 @@ function renderQuestion() {
     const choices = buildMode1Choices(word);
     quiz.choices = choices;
     container.innerHTML = '';
-    
+
     const grid = document.createElement('div');
     grid.className = 'choices';
     grid.id = 'mode1-choices-grid';
@@ -3531,10 +3193,17 @@ function renderQuestion() {
     qPrompt.textContent = 'この意味に対応する古文単語を書いてください（自動採点）';
     qSub.textContent = '';
     container.innerHTML = `
-      <input type="text" class="answer-input" id="free-answer" placeholder="古文単語で入力..." 
+      <input type="text" class="answer-input" id="free-answer" placeholder="古文単語で入力..."
         onkeydown="if(event.key==='Enter')gradeTypedAnswer()" autocomplete="off" autocapitalize="none" spellcheck="false">
       <button class="confirm-btn" onclick="gradeTypedAnswer()">採点する</button>
     `;
+  }
+
+  const voiceButton = document.getElementById('quiz-voice-btn');
+  if (voiceButton) {
+    const label = quiz.mode === 1 ? '古文単語を聞く' : '現代語訳を聞く';
+    voiceButton.title = label;
+    voiceButton.setAttribute('aria-label', label);
   }
 }
 
@@ -3737,7 +3406,7 @@ function nextQuestion() {
 function finishQuiz() {
   const correct = quiz.results.filter(r => r.correct).length;
   const wrong = quiz.results.length - correct;
-  
+
   const titleEl = document.getElementById('result-title');
   const subEl = document.getElementById('result-sub');
   const statsEl = document.getElementById('result-stats');
@@ -3746,7 +3415,7 @@ function finishQuiz() {
   const typeLabel = { normal: '通常クイズ', review: '復習テスト', bookmark: '★ブックマーク' }[quiz.type];
   titleEl.textContent = `${typeLabel}完了！`;
   subEl.textContent = `全${quiz.results.length}問`;
-  
+
   statsEl.innerHTML = `
     <div class="result-stat-item correct">
       <div class="result-stat-num">${correct}</div>
@@ -4122,15 +3791,15 @@ async function init() {
   }
   loadProgress();
   restoreClassAssignment();
-  window.addEventListener('online', () => { noticeAudience = ''; listenSchoolNotices(); refreshClassTestRange(); });
+  window.addEventListener('online', refreshClassTestRange);
   const redirected = await enforceMaintenanceMode();
   if (redirected) return;
   document.getElementById('loading-screen').style.display = 'none';
   renderAuthFab();
-  if (new URLSearchParams(location.search).get('view') === 'notifications') showNotifications();
-  else if (!openSharedSelection()) showHome();
+  if (!openSharedSelection()) showHome();
   refreshClassTestRange();
   showWelcomeModalIfNeeded();
+  if (new URLSearchParams(location.search).get('view') === 'account') showAccountSettings();
 }
 
 init().catch(e => {
@@ -4142,7 +3811,7 @@ init().catch(e => {
 
 function showAuthModal() {
   const modal = document.getElementById('auth-choice-modal');
-  if (!modal) { loginGoogle(); return; }
+  if (!modal) { const page = document.body.dataset.rolePage; const target = ['admin','teacher'].includes(page) ? page : 'account'; location.href = './login.html?return=' + target; return; }
   modal.classList.add('show');
   modal.setAttribute('aria-hidden', 'false');
   setTimeout(() => {
@@ -4176,9 +3845,9 @@ function authErrorMessage(e) {
   if (code === 'auth/wrong-password') return 'パスワードが違います';
   if (code === 'auth/email-already-in-use') return 'このメールアドレスは登録済みです';
   if (code === 'auth/weak-password') return 'パスワードは6文字以上にしてください';
-  if (code === 'auth/operation-not-allowed') return 'Firebaseでメール/パスワードログインを有効にしてください';
+  if (code === 'auth/operation-not-allowed') return 'このログイン方法は現在利用できません。別の方法をお試しください。';
   if (code === 'auth/popup-closed-by-user') return 'ログイン画面が閉じられました';
-  return (e && e.message) ? e.message : '認証に失敗しました';
+  return 'ログインできませんでした。入力内容を確認して、もう一度お試しください。';
 }
 
 async function loginGoogle(){
@@ -4272,9 +3941,7 @@ auth.onAuthStateChanged(async user => {
     await loadAccountProfile();
     await loadSchoolCodeFromProfile();
     await refreshClassTestRange();
-    syncPushAudience();
-    listenSchoolNotices();
-    renderClassStudyShortcut();
+      renderClassStudyShortcut();
     renderAuthFab();
     console.log('ログイン:', user.uid);
     await restoreCloudProgress();
@@ -4289,6 +3956,7 @@ auth.onAuthStateChanged(async user => {
     }
   } else {
     accountProfile = { nickname: '' };
+    accountSettingsTab = 'profile';
     renderClassStudyShortcut();
     renderAuthFab();
     leaderboardCache = [];
@@ -4345,9 +4013,7 @@ window.addEventListener('beforeunload', () => {
     const icon = (paths) => `<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
     nav.innerHTML = `
       <button type="button" data-target="screen-home" onclick="showHome()">${icon('<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>')}<span>学習</span></button>
-      <button type="button" data-target="screen-bookmark" onclick="showBookmarks()">${icon('<path d="M5 3h14v18l-7-4-7 4z"/>')}<span>復習</span></button>
-      <button type="button" data-target="screen-search" onclick="showSearch()">${icon('<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/>')}<span>検索</span></button>
-      <button type="button" data-target="screen-notifications" onclick="showNotifications()">${icon('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>')}<span>通知</span><span class="notice-nav-badge" id="notice-nav-badge" hidden></span></button>
+      <button type="button" data-target="screen-bookmark" onclick="showBookmarks()">${icon('<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/><path d="M8 10h5M8 13h3"/>')}<span>復習・検索</span></button>
       <button type="button" data-target="screen-results-dashboard" onclick="showResultsDashboard()">${icon('<path d="M4 20V12m5 8V8m5 12v-5m5 5V4"/><path d="M3 4h5l4 4 4-4h5"/>')}<span>成績</span></button>
       <button type="button" data-target="screen-account" onclick="showAccountTab()">${icon('<circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>')}<span>ログイン</span></button>
     `;
@@ -4368,8 +4034,27 @@ window.addEventListener('beforeunload', () => {
   }
 
   buildBottomNav();
-  updateNoticeBadge();
-  ['showHome','showSearch','showNotifications','showProgress','showResultsDashboard','showAccountTab','showBookmarks','showRanking','showAccountSettings','showSetScreen','showQuiz','showResult','quitQuiz','nextQuestion'].forEach(wrapScreenFunction);
+  let previousScrollY = window.scrollY;
+  let scrollFramePending = false;
+  window.addEventListener('scroll', () => {
+    if (scrollFramePending) return;
+    scrollFramePending = true;
+    requestAnimationFrame(() => {
+      const currentY = window.scrollY;
+      const nav = document.getElementById('mobile-bottom-nav');
+      if (nav && window.matchMedia('(max-width: 700px)').matches && !document.body.classList.contains('is-quiz-active')) {
+        if (currentY > 90 && currentY > previousScrollY + 8) nav.classList.add('compact');
+        else if (currentY < previousScrollY - 8 || currentY < 40) nav.classList.remove('compact');
+      }
+      previousScrollY = currentY;
+      scrollFramePending = false;
+    });
+  }, { passive: true });
+  document.querySelector('.study-word-list')?.addEventListener('toggle', event => {
+    const summary = event.currentTarget.querySelector('summary');
+    if (summary) summary.textContent = event.currentTarget.open ? '単語リストを閉じる' : '単語リストを開く';
+  });
+  ['showHome','showSearch','showProgress','showResultsDashboard','showAccountTab','showBookmarks','showRanking','showAccountSettings','showSetScreen','showQuiz','showResult','quitQuiz','nextQuestion'].forEach(wrapScreenFunction);
   try {
     if (auth && typeof auth.onAuthStateChanged === 'function') {
       auth.onAuthStateChanged(() => setTimeout(updateUiState, 80));
@@ -4559,8 +4244,8 @@ async function installPwaApp() {
     const id = active ? active.id : '';
     document.body.classList.toggle('is-quiz-active', id === 'screen-quiz');
     $$('.screen').forEach(s => s.setAttribute('aria-hidden', s === active ? 'false' : 'true'));
-    const map = { 'screen-home':'古文単語マスター', 'screen-set':'学習セット', 'screen-quiz':'クイズ中', 'screen-bookmark':'マイリスト', 'screen-ranking':'ランキング', 'screen-account':'アカウント設定', 'screen-result':'結果' };
-    if (map[id]) document.title = `${map[id]} | 古文単語マスター`;
+    const map = { 'screen-home':'ことのは単語', 'screen-set':'学習セット', 'screen-quiz':'クイズ中', 'screen-bookmark':'マイリスト', 'screen-ranking':'ランキング', 'screen-account':'アカウント設定', 'screen-result':'結果' };
+    if (map[id]) document.title = `${map[id]} | ことのは単語`;
   }
 
   function installBackToTop(){
@@ -4645,24 +4330,6 @@ async function installPwaApp() {
   else boot();
 })();
 
-document.addEventListener('DOMContentLoaded',()=>{
-  const addBtn=()=>{
-    const loginBtn=document.querySelector('.auth-btn.login, .auth-pill-login, .auth-btn.logout');
-    if(!loginBtn || document.querySelector('.classi-login-btn')) return;
-    const btn=document.createElement('button');
-    btn.className='classi-login-btn';
-    btn.textContent='📘 学習記録';
-    btn.onclick=()=>window.open('https://id.classi.jp/login/identifier','_blank');
-    const parent=loginBtn.parentElement;
-    if(parent){
-      if(getComputedStyle(parent).display!=='flex'){parent.style.display='flex';parent.style.gap='8px';parent.style.alignItems='center';}
-      parent.insertBefore(btn, loginBtn.nextSibling);
-    }
-  };
-  addBtn();
-  setInterval(addBtn,1200);
-});
-
 /* Mobile visible login bar */
 document.addEventListener('DOMContentLoaded', () => {
   const CLASSI_URL = 'https://id.classi.jp/login/identifier';
@@ -4715,53 +4382,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // The bottom navigation now owns login and account access.
 });
 
-document.addEventListener('DOMContentLoaded',()=>{
-  const selectors=[
-    '[id*="ad"]','.ad','.ads','.advertisement','.banner-ad',
-    'iframe[src*="ad"]','iframe[id*="ad"]'
-  ];
-  function attachClose(){
-    document.querySelectorAll(selectors.join(',')).forEach(el=>{
-      if(el.dataset.closeReady) return;
-      el.dataset.closeReady='1';
-      const target = el.tagName==='IFRAME' ? el.parentElement || el : el;
-      const cs=getComputedStyle(target);
-      if(cs.position==='static') target.style.position='relative';
-      const btn=document.createElement('button');
-      btn.className='ad-close-btn';
-      btn.type='button';
-      btn.setAttribute('aria-label','広告を閉じる');
-      btn.innerHTML='×';
-      btn.onclick=(e)=>{
-        e.stopPropagation();
-        target.classList.add('ad-hidden');
-      };
-      target.appendChild(btn);
-    });
-  }
-  attachClose();
-  const mo=new MutationObserver(()=>attachClose());
-  mo.observe(document.body,{childList:true,subtree:true});
-});
 
-(function(){
- function hideBottomAds(){
-   if(window.innerWidth>700) return;
-   const sels='iframe[src*="googlesyndication"],iframe[src*="doubleclick"],ins.adsbygoogle,.adsbygoogle,[id*="google_ads_iframe"],.sticky-ad,.bottom-ad,.footer-ad,[class*="bottom-ad"],[class*="sticky-ad"]';
-   document.querySelectorAll(sels).forEach(el=>{
-     const r=el.getBoundingClientRect();
-     if(r.bottom > window.innerHeight-220 || el.matches(sels)){
-       const t=el.parentElement && el.tagName==='IFRAME' ? el.parentElement : el;
-       t.style.display='none';
-       t.style.height='0';
-       t.style.overflow='hidden';
-     }
-   });
- }
- ['load','resize','scroll'].forEach(ev=>window.addEventListener(ev,hideBottomAds,{passive:true}));
- document.addEventListener('DOMContentLoaded',hideBottomAds);
- setInterval(hideBottomAds,1500);
-})();
 
 /* Mobile hamburger menu removed: smartphone navigation is now handled by the bottom bar. */
 (function(){

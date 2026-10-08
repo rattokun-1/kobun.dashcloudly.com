@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>古文単語マスター</title>
+<title>ことのは単語 5訂版</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/main.css?v=2.0">
 
@@ -11,14 +11,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c9a227">
+<meta name="theme-color" content="#7652a8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="古文単語マスター">
+<meta name="apple-mobile-web-app-title" content="ことのは単語">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="assets/icons/icon.png">
 <meta name="app-version" content="2026.09.25-v1.7">
@@ -30,12 +29,14 @@
   <div class="loading" id="loading-screen">読み込み中...</div>
 
   <div class="screen" id="screen-home">
-    <div class="header">
+    <div class="header app-header">
       <div>
-        <div class="header-title">古文単語マスター</div>
+        <div class="header-title">ことのは単語</div>
         <div class="header-sub">読んで見て覚える 重要古文単語315 全339語</div>
       </div>
-    </div>    <div class="content">
+      <button type="button" id="header-account-button" class="header-account-button" onclick="showAccountTab()" aria-label="ログインまたはマイページを開く"></button>
+    </div>
+    <div class="content">
       <div id="home-class-study"></div>
       <div id="home-pwa-invite"></div>
       <button type="button" class="review-entry" onclick="showBookmarks()" hidden>☆ 復習リストを開く <span>ブックマーク・間違えた単語 →</span></button>
@@ -43,30 +44,11 @@
       <div id="home-bookmark-panel"></div>
       <div id="home-alert"></div>
       <div class="home-stats" id="home-stats"></div>
-      <div class="home-word-search-panel" id="home-word-search-panel" role="search">
-        <div class="home-word-search-head">
-          <div>
-            <div class="home-word-search-title">単語検索</div>
-            <div class="home-word-search-sub">全339語から古文単語・現代語訳・番号で検索できます</div>
-          </div>
-          <span id="home-word-search-count" class="home-word-search-count">0語</span>
-        </div>
-        <div class="home-word-search-box">
-          <span class="home-word-search-icon">🔎</span>
-          <input id="home-word-search-input" type="search" placeholder="例：をかし / 趣がある / 55" autocomplete="off">
-          <button type="button" id="home-word-search-clear">クリア</button>
-        </div>
-        <div id="home-word-search-results" class="home-word-search-results" aria-live="polite"></div>
-      </div>
       <div class="section-title">学習する単語</div>
       <div class="sets-grid" id="sets-grid"></div>
     </div>
   </div>
 
-  <div class="screen" id="screen-search">
-    <div class="header"><div><div class="header-title">単語検索</div><div class="header-sub">古文単語・現代語訳・番号で検索</div></div></div>
-    <div class="content"><div id="search-panel-slot"></div></div>
-  </div>
   <div class="screen" id="screen-progress">
     <div class="header"><div><div class="header-title">学習の進捗</div><div class="header-sub">今の正誤と習得状況</div></div></div>
     <div class="content"><div id="progress-panel-slot"></div><div id="progress-ranking-slot"></div></div>
@@ -74,20 +56,6 @@
   <div class="screen" id="screen-results-dashboard">
     <div class="header"><div><div class="header-title">成績</div><div class="header-sub">進捗とランキング</div></div></div>
     <div class="content"><div id="results-stats-slot"></div><div id="results-ranking-panel-slot"></div><div id="results-leaderboard-slot"></div></div>
-  </div>
-
-  <div class="screen" id="screen-notifications">
-    <div class="header"><div><div class="header-title">通知</div><div class="header-sub">学校からのお知らせと学習リマインド</div></div></div>
-    <div class="content">
-      <div class="notice-settings-card">
-        <strong>通知の設定</strong><p id="notice-push-status">読み込み中...</p>
-        <div class="notice-settings-actions"><button type="button" class="btn btn-primary" onclick="enableInstalledPushNotifications()">プッシュ通知を有効化</button>
-        <button type="button" class="btn btn-secondary" onclick="disableInstalledPushNotifications()">停止</button></div>
-        <p>アプリ内の通知一覧はプッシュ通知を許可しなくても確認できます。</p>
-      </div>
-      <div class="notice-inbox-head"><h2>学校からの通知</h2><button type="button" class="btn btn-secondary" onclick="markAllSchoolNoticesRead()">すべて既読にする</button></div>
-      <div id="notice-inbox-list" class="notice-inbox-list" aria-live="polite"></div>
-    </div>
   </div>
 
   <div class="screen" id="screen-ranking">
@@ -223,13 +191,15 @@
         </div>
       </div>
       <div class="divider"></div>
-      <div class="section-title">単語リスト</div>
-      <div class="word-table-wrap">
-        <div class="word-table-header">
-          <span></span><span>No.</span><span>古文単語</span><span>意味</span><span>進捗 / ①②③</span>
+      <details class="study-word-list">
+        <summary>単語リストを開く</summary>
+        <div class="word-table-wrap">
+          <div class="word-table-header">
+            <span></span><span>No.</span><span>古文単語</span><span>意味</span><span>進捗 / ①②③</span>
+          </div>
+          <div class="word-table-scroll" id="word-table-body"></div>
         </div>
-        <div class="word-table-scroll" id="word-table-body"></div>
-      </div>
+      </details>
     </div>
   </div>
   <div class="screen" id="screen-quiz">
@@ -251,7 +221,7 @@
       <div class="question-card" style="position:relative;">
         <div class="quiz-action-row" aria-label="単語操作">
           <button class="quiz-bm-btn" id="quiz-bm-btn" onclick="toggleQuizBookmark()" title="ブックマーク">☆</button>
-          <button class="quiz-voice-btn" id="quiz-voice-btn" onclick="speakCurrentQuizWord()" title="古文単語を聞く">🔊</button>
+          <button class="quiz-voice-btn" id="quiz-voice-btn" onclick="speakCurrentQuizWord()" title="古文単語を聞く" aria-label="古文単語を聞く">🔊</button>
         </div>
         <div class="result-overlay correct-flash" id="correct-flash">✓</div>
         <div class="result-overlay wrong-flash" id="wrong-flash">✗</div>
@@ -298,12 +268,18 @@
     <div class="header">
       <button class="back-btn" onclick="showHome()">← ホーム</button>
       <div>
-        <div class="header-title" id="bm-screen-title">マイリスト</div>
+        <div class="header-title" id="bm-screen-title">復習・検索</div>
         <div class="header-sub" id="bm-screen-sub">0語</div>
       </div>
     </div>
     <div class="content">
-
+      <div id="review-search-slot">
+        <div class="home-word-search-panel" id="home-word-search-panel" role="search">
+          <div class="home-word-search-head"><div><div class="home-word-search-title">単語を検索して復習</div><div class="home-word-search-sub">古文単語・現代語訳・番号から検索できます</div></div><span id="home-word-search-count" class="home-word-search-count">0語</span></div>
+          <div class="home-word-search-box"><span class="home-word-search-icon" aria-hidden="true">🔎</span><input id="home-word-search-input" type="search" placeholder="古文単語・現代語訳・番号" autocomplete="off"><button type="button" id="home-word-search-clear">クリア</button></div>
+          <div id="home-word-search-results" class="home-word-search-results" aria-live="polite"></div>
+        </div>
+      </div>
       <div class="bm-filter-bar">
         <button class="bm-filter-btn active-all" id="bm-filter-all"   onclick="setBmFilter('all')">
           すべて <span class="bm-filter-count" id="bm-cnt-all">0</span>
@@ -374,7 +350,7 @@
       <div class="welcome-badge">初回確認</div>
       <h2 id="welcome-title">利用前にご確認ください</h2>
       <p class="welcome-lead">
-        古文単語マスターは学習補助ツールです。学習データはこの端末に保存され、ログインするとランキング参加や進捗の同期が使えます。
+        ことのは単語は学習補助ツールです。学習データはこの端末に保存され、ログインするとランキング参加や進捗の同期が使えます。
       </p>
       <ul class="welcome-terms">
         <li>学習目的の範囲で利用してください。</li>
@@ -397,41 +373,7 @@
       <div class="onboarding-actions" id="onboarding-actions"></div>
     </div>
   </div>
-  <div class="auth-choice-backdrop" id="auth-choice-modal" aria-hidden="true">
-    <div class="auth-choice-modal" role="dialog" aria-modal="true" aria-labelledby="auth-choice-title">
-      <button type="button" class="auth-choice-close" onclick="closeAuthModal()" aria-label="閉じる">×</button>
-      <div class="welcome-badge">LOGIN</div>
-      <h2 id="auth-choice-title">ログイン方法を選択</h2>
-      <p class="auth-choice-lead">ログインするとランキング参加・学習データ同期が使えます。ログインなしでも単語テストは利用できます。</p>
 
-      <button type="button" class="auth-google-btn" onclick="loginGoogle()">Googleでログイン</button>
-      <div class="auth-divider"><span>または学校・クラスでログイン</span></div>
-      <div class="school-class-login">
-        <label for="auth-school-id">学校ID</label>
-        <input id="auth-school-id" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="学校から配布されたID">
-        <label for="auth-class-id">クラスID（任意）</label>
-        <input id="auth-class-id" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="学校IDのみでもログインできます" onkeydown="if(event.key==='Enter')loginSchoolClass()">
-        <button id="auth-school-login" type="button" class="btn btn-primary" onclick="loginSchoolClass()">学校IDでログイン</button>
-        <div id="auth-school-message" class="school-login-message" role="status" aria-live="polite"></div>
-        <p>この端末専用の学習アカウントで保存されます。別の端末には履歴を引き継ぎません。</p>
-      </div>
-
-      <div class="auth-divider"><span>またはメールでログイン</span></div>
-
-      <div class="email-auth-box">
-        <input id="auth-email-input" type="email" inputmode="email" autocomplete="email" placeholder="メールアドレス">
-        <input id="auth-password-input" type="password" autocomplete="current-password" placeholder="パスワード（6文字以上）">
-        <div class="email-auth-actions">
-          <button type="button" class="email-login-btn" onclick="loginEmail()">ログイン</button>
-          <button type="button" class="email-signup-btn" onclick="signupEmail()">新規登録</button>
-        </div>
-        <button type="button" class="password-reset-btn" onclick="resetPassword()">パスワードを忘れた場合</button>
-      </div>
-
-      <button type="button" class="auth-guest-btn" onclick="startWithoutLogin()">ログインせずに始める</button>
-      <p class="welcome-note">学校コードやランキングを使う場合はログインがおすすめです。</p>
-    </div>
-  </div>
 
 
 </div>
@@ -451,7 +393,7 @@
     letter-spacing:0.5px;
     margin-bottom:6px;
   ">
-    古文単語マスター
+    ことのは単語
   </div>
 
   <div style="

@@ -1,4 +1,4 @@
-﻿const admin = require('firebase-admin');
+const admin = require('firebase-admin');
 const crypto = require('node:crypto');
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
@@ -10,7 +10,7 @@ const stamp = () => admin.firestore.FieldValue.serverTimestamp();
 const noticeId = value => crypto.createHash('sha256').update(value).digest('hex').slice(0, 32);
 const range = data => {
   const start = Number(data?.startId), end = Number(data?.endId);
-  return Number.isInteger(start) && Number.isInteger(end) && start >= 1 && end <= 2027 && start <= end
+  return Number.isInteger(start) && Number.isInteger(end) && start >= 1 && end <= 339 && start <= end
     ? `${start}〜${end}番` : '';
 };
 const createNotice = async (key, values) => {
