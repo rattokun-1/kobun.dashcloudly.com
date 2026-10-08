@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'yuki.1092.mkupo1216.m@gmail.com';
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isTeacher() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    function ownerCannotChangeAdminFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'role',
+        'disabledInApp',
+        'disabledUpdatedByUid',
+        'disabledUpdatedByEmail',
+        'disabledUpdatedAt',
+        'note',
+        'updatedByUid',
+        'updatedByEmail'
+      ]);
+    }
+
+    function ownerCreateSafe() {
+      return !request.resource.data.keys().hasAny([
+        'role',
+        'disabledInApp',
+        'disabledUpdatedByUid',
+        'disabledUpdatedByEmail',
+        'disabledUpdatedAt',
+        'note',
+        'updatedByUid',
+        'updatedByEmail'
+      ]);
+    }
+
+    // 全体設定・メンテナンス設定：閲覧は全員、変更は管理者のみ。
+    match /appSettings/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 学校・クラス参加コード：コード確認のため閲覧可。発行・停止・削除は管理者のみ。
+    match /schoolCodes/{code} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // クラスごとの出題範囲。IDを持つ生徒は閲覧、編集は管理者のみ。
+    match /schoolCodes/{schoolId}/classes/{classId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 学校単位の学習通知。内容は学校IDを知る利用者向けに公開。
+    // 生徒からの通知の偽造を防ぐため、作成はCloud Functionsのみ。
+    match /schoolNotices/{noticeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 管理者が設定する定期通知とテスト前日通知。
+    match /studySchedules/{scheduleId} {
+      allow read, write: if isAdmin();
+    }
+
+    // インストール済みPWA通知用トークン。
+    match /pushTokens/{clientId} {
+      allow create, update: if request.resource.data.clientId == clientId
+        && request.resource.data.installedOnly == true
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20;
+      allow read, delete: if isAdmin();
+    }
+
+    // 管理者が通知送信を予約するコレクション。
+    match /pushNotifications/{noticeId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.title is string
+        && request.resource.data.body is string
+        && request.resource.data.target == 'installed';
+      allow update, delete: if isAdmin();
+    }
+
+    // ユーザープロフィール。
+    // 本人は通常プロフィールのみ変更可。role / disabledInApp / note は管理者のみ変更可。
+    // 先生は先生用ページで閲覧のみ可能。
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin() || isTeacher();
+      allow create: if isAdmin() || (isOwner(uid) && ownerCreateSafe());
+      allow update: if isAdmin() || (isOwner(uid) && ownerCannotChangeAdminFields());
+      allow delete: if isAdmin() || isOwner(uid);
+    }
+
+    // ランキング。ログイン済みは閲覧可。自分のランキングだけ作成・更新可。管理者は変更可。
+    match /rankings/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    match /rankingsKobun/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid) || isAdmin();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
