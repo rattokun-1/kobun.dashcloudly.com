@@ -1558,67 +1558,6 @@ box-shadow:0 8px 18px rgba(37,99,235,.18);
 }
 
 
-/* Ad close button patch */
-.ad-close-btn{
- position:absolute; top:6px; right:6px; z-index:20;
- width:28px; height:28px; border:none; border-radius:999px;
- background:rgba(0,0,0,.65); color:#fff; cursor:pointer;
- font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center;
- box-shadow:0 4px 10px rgba(0,0,0,.18);
-}
-.ad-close-btn:hover{background:rgba(0,0,0,.8);}
-.ad-hidden{display:none !important;}
-
-
-/* Robust ad close button patch v2 */
-.ad-close-btn-v2{
- position:absolute !important;
- top:4px !important;
- right:4px !important;
- z-index:2147483647 !important;
- width:30px !important;
- height:30px !important;
- min-width:30px !important;
- min-height:30px !important;
- border:1px solid rgba(255,255,255,.75) !important;
- border-radius:999px !important;
- background:rgba(20,20,20,.82) !important;
- color:#fff !important;
- cursor:pointer !important;
- font-size:20px !important;
- font-weight:800 !important;
- line-height:1 !important;
- display:flex !important;
- align-items:center !important;
- justify-content:center !important;
- box-shadow:0 4px 14px rgba(0,0,0,.35) !important;
- padding:0 !important;
- appearance:none !important;
- -webkit-appearance:none !important;
-}
-.ad-close-btn-v2:hover{background:rgba(0,0,0,.95) !important;}
-.ad-hidden-by-user{display:none !important; visibility:hidden !important;}
-.ad-close-wrap-v2{position:relative !important;}
-.ad-close-fallback-v2{
- position:fixed !important;
- right:10px !important;
- bottom:calc(96px + env(safe-area-inset-bottom,0px)) !important;
- z-index:2147483647 !important;
- padding:9px 12px !important;
- border:none !important;
- border-radius:999px !important;
- background:rgba(20,20,20,.82) !important;
- color:#fff !important;
- font-family:'Noto Serif JP',serif !important;
- font-size:12px !important;
- font-weight:800 !important;
- box-shadow:0 8px 22px rgba(0,0,0,.28) !important;
-}
-@media (min-width:701px){
- .ad-close-fallback-v2{bottom:18px !important;}
-}
-
-
 /* Always hide bottom mobile ads */
 @media (max-width:700px){
   iframe[src*="googlesyndication"],
@@ -5881,31 +5820,11 @@ body { padding-bottom:calc(94px + var(--safe-bottom,env(safe-area-inset-bottom,0
 .school-login-message { min-height:1.4em; color:var(--text2); font-size:12px; line-height:1.5; }
 .school-login-message.error { color:#be3434; font-weight:700; }
 
-/* Six fluid tabs, including notification inbox. */
-.mobile-bottom-nav { grid-template-columns:repeat(6,minmax(0,1fr)) !important; }
-.mobile-bottom-nav button[data-target="screen-notifications"] { position:relative; }
-.notice-nav-badge { position:absolute; top:1px; right:clamp(0px,2vw,13px); min-width:17px; height:17px; border-radius:999px; background:#dd4d54; color:#fff; font:700 10px/17px system-ui,sans-serif; text-align:center; }
-.notice-nav-badge[hidden] { display:none !important; }
+/* Four fluid primary navigation tabs. */
+.mobile-bottom-nav { grid-template-columns:repeat(4,minmax(0,1fr)) !important; transition:padding .18s ease,transform .18s ease; }
+.mobile-bottom-nav.compact { padding-top:4px; padding-bottom:4px; transform:translateY(2px); }
+.mobile-bottom-nav.compact button { min-height:40px; gap:2px; }
 @media(max-width:370px) { .mobile-bottom-nav { gap:0; padding:4px; } .mobile-bottom-nav button { font-size:9px; padding:4px 0; } .mobile-bottom-nav .nav-icon { width:18px; height:18px; } }
-.feature-notice-fab { display:none !important; }
-.notice-settings-card,.notice-item { background:var(--card,#fff); border:1px solid var(--border); border-radius:17px; padding:18px; }
-.notice-settings-card { display:grid; gap:10px; margin-bottom:22px; }
-.notice-settings-card p { color:var(--text2); font-size:12px; }
-.notice-settings-actions { display:flex; flex-wrap:wrap; gap:8px; }
-.notice-inbox-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
-.notice-inbox-head h2 { font-size:17px; }
-.notice-inbox-head .btn { font-size:12px; }
-.notice-inbox-list { display:grid; gap:10px; }
-.notice-item { display:grid; text-align:left; gap:8px; width:100%; color:var(--text); font:inherit; cursor:pointer; }
-.notice-item.unread { border-color:var(--gold); box-shadow:inset 4px 0 var(--gold); }
-.notice-item-top { display:flex; justify-content:space-between; color:var(--text2); font-size:11px; }
-.notice-item strong { font-size:14px; }
-.notice-item > span:last-child { font-size:12px; line-height:1.5; }
-.notice-empty,.notice-error { padding:18px; border-radius:14px; background:var(--card2); color:var(--text2); font-size:13px; line-height:1.6; }
-.notice-error { color:#b23b42; margin-bottom:10px; }
-.admin-notice-schedule-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; }
-.admin-notice-schedule-form label { display:grid; gap:5px; font-size:12px; font-weight:700; }
-@media(max-width:470px) { .admin-notice-schedule-form { grid-template-columns:1fr; } }
 
 /* Mobile study controls and reachable quiz actions. */
 .mobile-study-choices { display:none; }
@@ -5914,6 +5833,101 @@ body { padding-bottom:calc(94px + var(--safe-bottom,env(safe-area-inset-bottom,0
 .pwa-invite { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:16px; margin-bottom:16px; border-radius:17px; border:1px solid rgba(212,175,55,.5); background:linear-gradient(120deg,rgba(212,175,55,.16),var(--card,#fff)); }
 .pwa-invite strong { font-size:15px; }.pwa-invite p { margin:5px 0 0; color:var(--text2); font-size:12px; }.pwa-invite-actions { display:flex; flex-wrap:wrap; gap:6px; }.pwa-invite-actions .btn { min-height:42px; }
 .account-details { margin-top:14px; }.account-details summary { cursor:pointer; list-style:none; padding:13px 3px; font-weight:700; color:var(--text); }.account-details summary::after { content:'⌄'; float:right; color:var(--gold2); }.account-details[open] summary::after { content:'⌃'; }.account-details > .account-card { margin:10px 0; }
+
+/* Consistent account, study list, and responsive navigation controls. */
+.app-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.header-account-button { flex:0 0 auto; display:grid; place-items:center; width:46px; height:46px; padding:3px; border:1px solid var(--border); border-radius:50%; background:var(--card,#fff); color:var(--text); cursor:pointer; box-shadow:0 3px 12px rgba(25,43,73,.12); }
+.header-account-avatar,.header-account-avatar-fallback { display:grid; place-items:center; width:100%; height:100%; border-radius:50%; object-fit:cover; }
+.header-account-avatar-fallback { background:var(--card2); font-size:20px; font-weight:700; }
+.header-login-icon { width:22px; height:22px; }
+.school-brand-logo { display:block; width:auto; max-width:min(48vw,280px); height:auto; max-height:76px; object-fit:contain; object-position:left center; }
+.profile-avatar-image { display:block; object-fit:cover; }
+.avatar-picker { position:relative; display:inline-flex; min-height:42px; align-items:center; justify-content:center; padding:0 16px; border:1px solid var(--border); border-radius:12px; background:var(--card2); color:var(--text); font-weight:700; cursor:pointer; }
+.avatar-picker input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.study-word-list { margin:18px 0; border:1px solid var(--border); border-radius:14px; background:var(--card,#fff); overflow:hidden; }
+.study-word-list summary { padding:14px 16px; color:var(--text); font-weight:700; cursor:pointer; list-style:none; }
+.study-word-list summary::-webkit-details-marker { display:none; }
+.study-word-list summary::after { content:'＋'; float:right; color:var(--gold2); }
+.study-word-list[open] summary::after { content:'−'; }
+.study-word-list #word-table-body { padding:0 12px 12px; }
+.account-layout > .account-card,.account-layout > details.account-card { min-width:0; }
+@media(max-width:700px) {
+  .app-header { padding-inline:16px; }
+  .header-account-button { width:42px; height:42px; }
+  .account-layout { grid-template-columns:minmax(0,1fr); }
+  .mobile-bottom-nav.compact .nav-icon { width:18px; height:18px; }
+}
+@media(prefers-reduced-motion:reduce) { .mobile-bottom-nav { transition:none; } }
+
+/* Dedicated sign-in screen and compact account settings. */
+.login-page { min-height:100vh; margin:0; padding:clamp(18px,4vw,48px); background:radial-gradient(ellipse at 18% 15%,rgba(208,226,255,.72),transparent 38%),linear-gradient(145deg,#f6f8fc,#edf1f7); color:#1f2d3d; }
+.login-shell { max-width:1100px; margin:0 auto; }
+.login-back-link { display:inline-block; margin:0 0 26px; color:#526176; font-size:14px; font-weight:700; text-decoration:none; }
+.login-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,470px); align-items:center; gap:clamp(32px,8vw,100px); min-height:min(760px,calc(100vh - 125px)); }
+.login-intro { max-width:510px; }
+.login-brand-mark { display:grid; place-items:center; width:54px; height:54px; margin-bottom:26px; border-radius:17px; background:linear-gradient(145deg,#d8b34b,#a77b1e); color:#fff; font:700 28px Georgia,serif; box-shadow:0 10px 24px rgba(167,123,30,.25); }
+.login-eyebrow,.login-card-heading > span { color:#957323; font-size:11px; font-weight:900; letter-spacing:.18em; }
+.login-intro h1 { margin:12px 0 18px; color:#172338; font-size:clamp(36px,5.3vw,60px); line-height:1.18; letter-spacing:-.045em; }
+.login-intro > p { max-width:430px; color:#647187; font-size:16px; line-height:1.9; }
+.login-benefits { display:grid; gap:12px; margin-top:32px; color:#46556a; font-size:14px; font-weight:700; }
+.login-card { padding:clamp(22px,4vw,38px); border:1px solid rgba(255,255,255,.85); border-radius:26px; background:rgba(255,255,255,.90); box-shadow:0 24px 70px rgba(38,54,78,.13); backdrop-filter:blur(16px); }
+.login-card-heading { margin-bottom:22px; }
+.login-card-heading h2 { margin:8px 0 5px; font-size:24px; }
+.login-card-heading p,.login-school-details { color:#6a7788; font-size:13px; }
+.login-google-button { width:100%; min-height:50px; border:1px solid #d9dfe8; border-radius:13px; background:#fff; color:#243247; font:700 15px system-ui,sans-serif; cursor:pointer; }
+.login-separator { display:flex; align-items:center; gap:12px; margin:20px 0; color:#8791a0; font-size:11px; }
+.login-separator::before,.login-separator::after { content:''; height:1px; flex:1; background:#e7eaf0; }
+.login-card form,.login-school-form { display:grid; gap:9px; }
+.login-card form label,.login-school-form label { margin-top:4px; color:#435167; font-size:12px; font-weight:800; }
+.login-card form input,.login-school-form input { width:100%; min-height:48px; box-sizing:border-box; padding:11px 13px; border:1px solid #dfe4ed; border-radius:12px; background:#fbfcfe; color:#202d40; font:inherit; }
+.login-email-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:5px; }
+.login-email-actions .btn { min-height:47px; }
+.login-reset-link,.login-guest-link { display:block; margin:13px auto; border:0; background:transparent; color:#53647b; font:700 12px system-ui,sans-serif; cursor:pointer; }
+.login-school-details { margin-top:18px; padding-top:16px; border-top:1px solid #e9edf3; }
+.login-school-details summary { color:#41516a; font-weight:800; cursor:pointer; }
+.login-school-form { padding-top:14px; }
+.login-message { min-height:22px; margin-top:12px; color:#46566b; font-size:13px; line-height:1.55; }
+.login-message.error { color:#b13943; }
+.login-footer { padding:25px 0 0; color:#7f8998; text-align:center; font-size:11px; }
+.account-greeting { padding:clamp(22px,5vw,38px); margin-bottom:18px; border:1px solid var(--border); border-radius:22px; background:linear-gradient(120deg,rgba(226,237,255,.8),var(--card,#fff)); }
+.account-greeting-kicker { color:var(--gold2); font-size:11px; font-weight:900; letter-spacing:.16em; }
+.account-greeting h1 { margin:8px 0; font-size:clamp(24px,5vw,32px); line-height:1.3; }
+.account-greeting p,.account-panel-title + .account-help { margin:0; color:var(--text2); }
+.account-settings-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:16px; padding:6px; border:1px solid var(--border); border-radius:16px; background:var(--card2); }
+.account-tab-button { min-height:46px; padding:8px 6px; border:0; border-radius:11px; background:transparent; color:var(--text2); font:700 13px/1.3 system-ui,sans-serif; cursor:pointer; }
+.account-tab-button.active { background:var(--card,#fff); color:var(--text); box-shadow:0 2px 10px rgba(31,45,61,.09); }
+.account-tab-panel { display:grid; gap:14px; }
+.account-panel-title { margin:0 0 8px; font-size:20px; }
+.account-login-prompt { display:grid; justify-items:start; gap:11px; padding:clamp(24px,5vw,40px); }
+.account-login-mark { display:grid; place-items:center; width:52px; height:52px; border-radius:17px; background:var(--card2); font-size:25px; }
+.account-login-prompt h2,.account-login-prompt p { margin:0; }
+.account-login-prompt p { max-width:560px; color:var(--text2); line-height:1.7; }
+.school-logo-admin { display:grid; gap:10px; margin-top:18px; padding:16px; border:1px solid var(--border); border-radius:15px; background:var(--card2); }
+.school-logo-actions { display:flex; flex-wrap:wrap; align-items:center; gap:9px; }
+.school-logo-actions .btn { min-height:42px; }
+@media(max-width:760px) {
+  .login-page { padding:16px; }
+  .login-layout { grid-template-columns:minmax(0,1fr); gap:22px; min-height:0; }
+  .login-intro { padding:12px 4px 0; }
+  .login-brand-mark { width:46px; height:46px; margin-bottom:18px; border-radius:14px; }
+  .login-intro h1 { font-size:36px; }
+  .login-intro > p { font-size:14px; }
+  .login-benefits { display:flex; flex-wrap:wrap; gap:9px 16px; margin-top:16px; font-size:11px; }
+  .login-card { padding:22px 18px; border-radius:22px; }
+  .login-footer { padding-top:18px; }
+  .account-settings-tabs { gap:3px; padding:4px; }
+  .account-tab-button { font-size:11px; }
+}
+@media(max-width:380px) { .account-settings-tabs { grid-template-columns:1fr; } .account-tab-button { min-height:40px; } }
+body.is-studying > footer { display:none !important; }
+#screen-results-dashboard > .header { position:relative; border-bottom:1px solid var(--border); }
+#screen-results-dashboard > .content { width:min(1100px,100%); margin-inline:auto; }
+#screen-results-dashboard .home-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; padding:16px; border-radius:20px; }
+#screen-results-dashboard .home-stat { min-width:0; padding:16px 8px; border-radius:15px; background:var(--card2); }
+#screen-results-dashboard .ranking-panel { margin-bottom:18px; border-radius:20px; }
+#screen-results-dashboard #screen-ranking > .content { padding:0; }
+#screen-results-dashboard .ranking-layout { gap:16px; }
+@media(max-width:560px) { #screen-results-dashboard .home-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:10px; } #screen-results-dashboard .home-stat { padding:13px 6px; } }
 .skip-answer { margin-top:14px; padding:13px; background:var(--card2); border-radius:12px; font-weight:700; }
 .unknown-btn,.grade-mobile-btn { min-height:52px; border-radius:14px; border:1px solid var(--border); background:var(--card,#fff); color:var(--text); font:700 15px/1.4 system-ui,sans-serif; cursor:pointer; padding:12px; }.grade-mobile-btn { color:#fff; background:var(--gold2); border-color:var(--gold2); }.quiz-bottom-actions [hidden] { display:none !important; }
 @media(max-width:700px) {
@@ -5961,3 +5975,69 @@ body { padding-bottom:calc(94px + var(--safe-bottom,env(safe-area-inset-bottom,0
 #onboarding-extra { margin:18px 0; padding:13px; border-radius:12px; background:var(--card2); color:var(--text2); font-size:13px; line-height:1.65; }
 .onboarding-actions { display:grid; gap:9px; }.onboarding-actions button { width:100%; min-height:50px; border-radius:12px; cursor:pointer; }
 .onboarding-skip { border:1px solid var(--border); background:var(--card); color:var(--text); font:700 14px system-ui,sans-serif; }
+
+/* Google-style centered sign-in flow. */
+.google-login-page { min-height:100vh; display:grid; grid-template-rows:1fr auto; align-items:center; padding:32px 20px 18px; background:#f0f4f9; color:#202124; font-family:Arial,Roboto,system-ui,sans-serif; }
+.google-login-shell { width:min(450px,100%); margin:auto; }
+.google-login-card { padding:42px 40px 34px; border:1px solid #dadce0; border-radius:24px; background:#fff; box-shadow:0 2px 8px rgba(60,64,67,.08); }
+.google-login-brand { display:grid; justify-items:center; }
+.google-login-brand-mark { display:grid; place-items:center; width:38px; height:38px; border-radius:50%; background:#1a73e8; color:#fff; font-size:20px; font-weight:700; }
+.google-login-card h1 { margin:17px 0 7px; color:#202124; font-size:24px; font-weight:400; text-align:center; }
+.google-login-subtitle { margin:0 0 26px; color:#5f6368; font-size:14px; line-height:1.55; text-align:center; }
+.google-login-step[hidden],.google-login-page [hidden] { display:none !important; }
+.google-login-input { width:100%; min-height:54px; box-sizing:border-box; padding:13px 14px; border:1px solid #747775; border-radius:4px; outline:none; background:#fff; color:#202124; font:16px Arial,system-ui,sans-serif; }
+.google-login-input:focus { border:2px solid #0b57d0; padding:12px 13px; }
+.google-primary-button,.google-provider-button { width:100%; min-height:44px; display:flex; align-items:center; justify-content:center; gap:10px; border-radius:22px; font:600 14px Arial,system-ui,sans-serif; cursor:pointer; }
+.google-primary-button { margin-top:23px; border:0; background:#0b57d0; color:#fff; }
+.google-primary-button:hover { background:#0842a0; }
+.google-provider-button { margin-top:12px; border:1px solid #747775; background:#fff; color:#3c4043; }
+.google-provider-button:hover { background:#f8fafd; }
+.google-provider-button svg { width:20px; height:20px; }
+.google-text-button { border:0; padding:7px 0; background:transparent; color:#0b57d0; font:600 14px Arial,system-ui,sans-serif; cursor:pointer; }
+.google-login-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; }
+.google-login-email { margin:0 auto 22px; max-width:100%; overflow:hidden; padding:7px 12px; border:1px solid #dadce0; border-radius:18px; color:#3c4043; font-size:13px; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
+.google-login-separator { display:flex; align-items:center; gap:13px; margin:20px 0; color:#5f6368; font-size:12px; }
+.google-login-separator::before,.google-login-separator::after { height:1px; flex:1; background:#dadce0; content:''; }
+.google-login-message { min-height:22px; margin:15px 0 0; color:#5f6368; font-size:13px; line-height:1.5; }
+.google-login-message.error { color:#b3261e; }
+.school-login-logo { display:grid; place-items:center; min-height:90px; margin:8px auto 18px; }
+.school-login-logo img { display:block; max-width:min(100%,300px); max-height:110px; object-fit:contain; }
+.google-login-footer { padding-top:18px; color:#5f6368; font-size:12px; text-align:center; }
+@media(max-width:520px) { .google-login-page { display:block; padding:20px 0 12px; background:#fff; } .google-login-card { padding:28px 22px 24px; border:0; border-radius:0; box-shadow:none; } .google-login-footer { padding:18px; } }
+/* Login markup uses shared legacy class names for the step/form elements. */
+.google-login-card > .login-brand-mark { display:grid; place-items:center; width:38px; height:38px; margin:0 auto 8px; border-radius:50%; background:#1a73e8; color:#fff; font-size:20px; }
+.google-login-card .login-step[hidden] { display:none !important; }
+.google-login-card form { display:grid; gap:9px; }
+.google-login-card .google-field-label { margin-top:4px; color:#3c4043; font-size:13px; font-weight:500; }
+.google-login-card .google-account-create-link,.google-login-card .google-school-link { display:block; margin:15px 0 0 auto; border:0; padding:6px 0; background:transparent; color:#0b57d0; font:600 14px Arial,system-ui,sans-serif; cursor:pointer; }
+.google-login-card .google-account-create-link { margin-right:auto; }
+.google-login-card .google-or { display:flex; align-items:center; gap:12px; margin:20px 0; color:#5f6368; font-size:12px; }
+.google-login-card .google-or::before,.google-login-card .google-or::after { height:1px; flex:1; background:#dadce0; content:''; }
+.google-login-card .google-g-logo { width:20px; height:20px; }
+.google-login-card .google-back-button { display:grid; place-items:center; width:36px; height:36px; margin:-12px 0 5px -9px; border:0; border-radius:50%; background:transparent; color:#5f6368; font-size:23px; cursor:pointer; }
+.google-login-card .chosen-email { width:max-content; max-width:100%; margin:0 auto 22px; overflow:hidden; padding:7px 12px; border:1px solid #dadce0; border-radius:18px; color:#3c4043; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.google-login-card .login-message { color:#5f6368; }
+.google-login-card .login-message.error { color:#b3261e; }
+.google-login-card .school-next-actions { display:grid; gap:8px; }
+.google-login-card .school-next-actions .google-or { text-align:center; }
+.google-login-card .google-primary-button:disabled,.google-login-card .google-provider-button:disabled { opacity:.65; cursor:wait; }
+@media(max-width:520px) { .google-login-shell { width:100%; } .google-login-card > .login-brand-mark { margin-bottom:8px; } }
+
+/* Match the study app palette and typography on the login screen. */
+.google-login-page { background:var(--bg); color:var(--text); font-family:'Noto Serif JP',serif; }
+.google-login-card { border-color:var(--border); border-radius:20px; background:var(--card); box-shadow:0 8px 26px rgba(44,62,80,.08); }
+.google-login-brand-mark,.google-login-card > .login-brand-mark { background:linear-gradient(145deg,var(--gold),var(--gold2)); color:#fff; box-shadow:0 8px 20px rgba(181,149,47,.2); }
+.google-login-card h1 { color:var(--text); font-family:'Playfair Display','Noto Serif JP',serif; font-weight:700; }
+.google-login-subtitle,.google-login-footer,.google-login-message,.google-login-card .login-message { color:var(--text2); }
+.google-login-input { border-color:var(--border); border-radius:10px; background:var(--card); color:var(--text); font-family:'Noto Serif JP',serif; }
+.google-login-input:focus { border-color:var(--gold2); box-shadow:0 0 0 3px rgba(181,149,47,.14); }
+.google-primary-button { border-radius:12px; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#fff; font-family:'Noto Serif JP',serif; }
+.google-primary-button:hover { background:var(--gold2); }
+.google-provider-button { border-color:var(--border); border-radius:12px; background:var(--card); color:var(--text); font-family:'Noto Serif JP',serif; }
+.google-provider-button:hover { border-color:var(--gold); background:var(--card2); }
+.google-login-card .google-account-create-link,.google-login-card .google-school-link,.login-back-link { color:var(--gold2); font-family:'Noto Serif JP',serif; }
+.google-login-card .google-field-label { color:var(--text); font-family:'Noto Serif JP',serif; }
+.google-login-card .google-or::before,.google-login-card .google-or::after { background:var(--border); }
+.google-login-card .chosen-email { border-color:var(--border); color:var(--text); }
+.google-login-card .google-back-button { color:var(--text2); }
+@media(max-width:520px) { .google-login-page { background:var(--bg); } .google-login-card { border:1px solid var(--border); border-radius:18px; box-shadow:0 4px 18px rgba(44,62,80,.06); } }

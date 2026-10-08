@@ -1,4 +1,4 @@
-﻿# ログイン方法の追加
+# ログイン方法の追加
 
 この版ではログイン画面を以下の3択に変更しています。
 
@@ -13,7 +13,7 @@ Firebase Console > Authentication > Sign-in method で次を有効化してく�
 1. Google
 2. Email/Password
 
-メールログインを有効にしていない場合、アプリ側では `Firebaseでメール/パスワードログインを有効にしてください` と表示されます。
+メールログインが利用できない場合、アプリには一般的なログインエラーが表示されます。Authenticationの有効化状況は管理者がFirebase Consoleで確認してください。
 
 ## 管理者メール
 

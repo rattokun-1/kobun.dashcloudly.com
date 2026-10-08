@@ -1,6 +1,6 @@
-﻿{
-  "name": "古文単語マスター",
-  "short_name": "古文単語",
+{
+  "name": "ことのは単語",
+  "short_name": "シス単",
   "description": "読んで見て覚える 重要古文単語315 学習サポートツール",
   "start_url": "./index.html",
   "scope": "./",

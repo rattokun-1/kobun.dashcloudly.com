@@ -1,5 +1,5 @@
-﻿{
-  "name": "kobun-master-functions",
+{
+  "name": "systan-master-functions",
   "private": true,
   "engines": { "node": "20" },
   "dependencies": {
