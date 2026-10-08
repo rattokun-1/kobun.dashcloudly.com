@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f6fa">
-  <title>ログイン | ことのは単語</title>
+  <title>ログイン | DashCloudly 学習ID</title>
   <link rel="stylesheet" href="assets/css/main.css">
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -14,11 +14,12 @@
   <main class="google-login-shell">
     <a class="login-back-link" href="./index.html">← 学習画面に戻る</a>
     <section class="google-login-card" aria-labelledby="login-title">
-      <div class="login-brand-mark" aria-hidden="true">S</div>
+      <div class="login-brand-mark" aria-hidden="true">D</div>
 
       <div id="email-step" class="login-step">
         <h1 id="login-title">ログイン</h1>
-        <p class="google-login-subtitle">ことのは単語を続ける</p>
+        <p class="google-login-subtitle">DashCloudly 学習IDで続ける</p>
+        <p class="login-account-note">シス単マスター・ことのは単語で共通して利用できます。</p>
         <form id="email-form" novalidate>
           <label class="google-field-label" for="email-input">メールアドレス</label>
           <input id="email-input" class="google-login-input" type="email" autocomplete="username" inputmode="email" required placeholder="メールアドレスを入力">
@@ -74,7 +75,7 @@
 
       <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
     </section>
-    <footer class="google-login-footer">ことのは単語</footer>
+    <footer class="google-login-footer">DashCloudly 学習ID</footer>
   </main>
 
   <script>
@@ -103,6 +104,7 @@
     const showStep = id => {
       ['email-step', 'password-step', 'school-step', 'school-success-step'].forEach(step => { $(step).hidden = step !== id; });
       activeScreen = id;
+      document.querySelectorAll('.login-step').forEach(step => step.classList.toggle('login-step-active', step.id === id));
       showMessage();
       if (id === 'password-step') $('password-input').focus();
       if (id === 'email-step') $('email-input').focus();
