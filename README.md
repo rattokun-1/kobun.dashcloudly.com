@@ -39,7 +39,7 @@ python -m http.server 8000
 | `firestore.rules` | Firestoreのアクセス制御ルール |
 | `admin.html` / `teacher.html` | 権限を持つ利用者向けの画面 |
 | `maintenance.html` / `update.html` | メンテナンス・更新用画面 |
-| `readme/` | 個別機能の導入・運用メモ |
+| `functions/README-login.md` | 無料プラン対応ログインの説明 |
 
 ## Firebaseを利用する場合
 
@@ -48,7 +48,7 @@ python -m http.server 8000
 1. Firebase Console でWebアプリを登録し、Authentication の使用するログイン方法（Google、メール／パスワード、学校ID利用時に必要な匿名認証）と承認済みドメインを確認します。
 2. Firestoreを用意し、`firestore.rules` の内容を**対象プロジェクトを確認してから**適用します。学校IDやクラス、学校別テスト範囲は管理者による登録が必要です。
 
-このZIPには `firebase.json` と `.firebaserc` が含まれていません。Firebase CLIのデプロイコマンドをそのまま実行する前に、使用するプロジェクトとHostingの設定を用意してください。ログイン方法は [`readme/README_login_methods.md`](readme/README_login_methods.md) を参照してください。
+このリポジトリの `firebase.json` でFirestoreルールを配置できます。対象プロジェクトを指定して `firebase deploy --only firestore:rules --project <PROJECT_ID>` を実行してください。静的サイトの配信先は別途設定します。メールログインはCloud Functionsのメール照会を使わず、メール入力後にパスワード画面へ進みます。
 
 ## GitHubで公開する前に
 
@@ -64,3 +64,17 @@ python -m http.server 8000
 
 - FirestoreやFirebase認証が利用できない場合、ランキング・学校関連機能・端末間同期などは利用できません。
 - 学習日数の連続記録機能は含みません。
+## 最近の修正と確認
+
+学校参加画面の見出しID、同期前のクラウド復元、プロフィール画像と学校ロゴの分離、ヘッダー寸法とスマートフォンの操作領域を修正しました。設定画面から学校管理と使い方を開けます。Firestoreの管理者判定では検証済みメールを必須とし、先生の学校変更を制限しています。ルールはWebファイルと別に配置してください。
+
+表示用アイコンを128px WebP、PWAアイコンを192px/512px PNGに分けました。学習・先生・管理者ページのスクリプトはdeferで順序を保って読み込みます。
+
+Node.jsで次の回帰チェックを実行できます（外部通信なし、Firebaseを模擬）。Firestoreルールのエミュレーター検証を代替するものではありません。
+
+```bash
+node tests/login-regression.cjs
+node tests/sync-regression.cjs
+node --check assets/js/app.js
+node --check sw.js
+```

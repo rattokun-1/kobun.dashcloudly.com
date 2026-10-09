@@ -1,5 +1,5 @@
 /* ことのは単語 PWA Service Worker */
-const CACHE_VERSION = '20261007-ui-v2.1';
+const CACHE_VERSION = '20261010-performance-v3.2';
 const CACHE_NAME = 'kobun-master-' + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -11,7 +11,7 @@ const APP_SHELL = [
   './manifest.json',
   './assets/css/main.css',
   './assets/js/app.js',
-  './assets/icons/icon.png',
+  './assets/icons/icon-128.webp',
   './admin.html',
   './teacher.html'
 ];

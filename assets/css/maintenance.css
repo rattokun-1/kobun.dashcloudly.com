@@ -4,7 +4,7 @@
       --card: rgba(255,255,255,0.92);
       --text: #243447;
       --sub: #6b7a8c;
-      --accent: #d4af37;
+      --accent: #7652a8;
       --accent-dark: #b89427;
       --border: #d9e2ec;
       --shadow: 0 20px 50px rgba(36, 52, 71, 0.12);
@@ -21,7 +21,7 @@
       font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(212,175,55,0.18), transparent 35%),
+        radial-gradient(circle at top left, rgba(118,82,168,0.18), transparent 35%),
         radial-gradient(circle at bottom right, rgba(52,152,219,0.12), transparent 28%),
         linear-gradient(135deg, var(--bg1), var(--bg2));
     }
@@ -45,8 +45,8 @@
       border-radius: 50%;
       display: grid;
       place-items: center;
-      background: linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08));
-      border: 1px solid rgba(212,175,55,0.35);
+      background: linear-gradient(135deg, rgba(118,82,168,0.18), rgba(118,82,168,0.08));
+      border: 1px solid rgba(118,82,168,0.35);
       font-size: 38px;
     }
 
@@ -59,8 +59,8 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       color: var(--accent-dark);
-      background: rgba(212,175,55,0.14);
-      border: 1px solid rgba(212,175,55,0.28);
+      background: rgba(118,82,168,0.14);
+      border: 1px solid rgba(118,82,168,0.28);
     }
 
     h1 {

@@ -1,3 +1,6 @@
+const STORAGE_KEY = 'kobun_progress_v1';
+let cloudSaveTimer = null;
+let cloudRestoreComplete = false;
 const WELCOME_ACCEPTED_KEY = 'systan_welcome_terms_accepted_v1';
 const SCHOOL_CODE_KEY = 'systan_school_code_v1';
 const SCHOOL_CODE_NAME_KEY = 'systan_school_name_v1';
@@ -193,7 +196,7 @@ function playFinishSound() {
 // =========================================================
 // OFFLINE CACHE / DATA SAVER
 // =========================================================
-const APP_CACHE_VERSION = '2026.09.25-onboarding-v2.0';
+const APP_CACHE_VERSION = '2026.10.10-performance-v3.2';
 
 async function registerOfflineCache() {
   if (!('serviceWorker' in navigator)) return;
@@ -921,6 +924,8 @@ function cacheSchoolLogo(code, value) {
 }
 
 function renderSchoolBranding() {
+  const accountButton = document.getElementById('header-account-button');
+  if (accountButton) accountButton.innerHTML = getAccountIconMarkup();
   const title = document.querySelector('.app-header .header-title');
   if (!title) return;
   const logo = getCachedSchoolLogo();
@@ -1128,7 +1133,7 @@ function isSchoolAdmin(user = auth.currentUser) {
   if (!user) return false;
   const email = String(user.email || '').toLowerCase();
   const uid = String(user.uid || '');
-  return ADMIN_UIDS.includes(uid) || ADMIN_EMAILS.map(v => String(v).toLowerCase()).includes(email);
+  return user.emailVerified === true && (ADMIN_UIDS.includes(uid) || ADMIN_EMAILS.map(v => String(v).toLowerCase()).includes(email));
 }
 
 async function getUserManagementProfile(user = auth.currentUser) {
@@ -1638,17 +1643,21 @@ function renderAdminUserRows(rows) {
         <div class="admin-user-avatar">${suspended ? '⛔' : '👤'}</div>
         <div>
           <div class="admin-user-name">${nick || '名前未設定'} <span class="admin-pill ${suspended ? 'off' : 'on'}">${suspended ? '停止中' : '有効'}</span></div>
-          <div class="admin-user-sub">${email} ／ UID: <span class="admin-mono">${uid}</span></div>
+          <div class="admin-user-sub">${email}</div><details class="admin-uid-details"><summary>ユーザーID</summary><span class="admin-mono">${uid}</span></details>
           <div class="admin-user-sub">${escapeHtml(stats)}</div>
         </div>
       </div>
+      <div class="admin-role-assignment"><div class="admin-role-current">現在の権限 <strong class="admin-role-badge">${role === 'teacher' ? '先生' : role === 'admin' ? '管理者メモ' : '生徒・一般'}</strong><span>${schoolName || schoolCode || '学校未設定'}</span></div>
+        <label class="admin-field admin-role-field"><span>割り当てる権限</span><select id="admin-user-role-${uid}" class="account-input"><option value="user" ${role === 'user' ? 'selected' : ''}>生徒・一般ユーザー</option><option value="teacher" ${role === 'teacher' ? 'selected' : ''}>先生（所属校の閲覧）</option><option value="admin" ${role === 'admin' ? 'selected' : ''}>管理者メモ</option></select></label>
+      </div>
+      <details class="admin-user-details"><summary>プロフィール・所属学校・管理メモ</summary>
       <div class="admin-user-edit-grid">
         <label class="admin-field"><span>表示名</span><input id="admin-user-nick-${uid}" class="account-input" maxlength="24" value="${nick}" placeholder="表示名"></label>
         <label class="admin-field"><span>学校コード</span><input id="admin-user-school-code-${uid}" class="account-input" maxlength="20" value="${schoolCode}" placeholder="ABC123"></label>
         <label class="admin-field"><span>学校名</span><input id="admin-user-school-name-${uid}" class="account-input" maxlength="40" value="${schoolName}" placeholder="学校名・クラス名"></label>
-        <label class="admin-field"><span>権限</span><select id="admin-user-role-${uid}" class="account-input"><option value="user" ${role === 'user' ? 'selected' : ''}>一般</option><option value="teacher" ${role === 'teacher' ? 'selected' : ''}>先生</option><option value="admin" ${role === 'admin' ? 'selected' : ''}>管理者メモ</option></select></label>
         <label class="admin-field admin-user-note-field"><span>管理メモ</span><input id="admin-user-note-${uid}" class="account-input" maxlength="80" value="${note}" placeholder="任意メモ"></label>
       </div>
+      </details>
       <div class="admin-user-actions">
         <button class="btn btn-primary" onclick="saveAdminUserProfile('${uid}')">変更を保存</button>
         <button class="btn btn-secondary" onclick="toggleAdminUserSuspended('${uid}', ${suspended ? 'false' : 'true'})">${suspended ? '利用停止を解除' : '利用停止にする'}</button>
@@ -2049,12 +2058,9 @@ function renderAuthFab() {
   const displayName = user ? getPublicNickname(user) : 'ログイン';
   const headerButton = document.getElementById('header-account-button');
   if (headerButton) {
-    headerButton.innerHTML = profileAvatarData
-      ? `<img class="header-account-avatar" src="${profileAvatarData}" alt="">`
-      : user
-        ? `<span class="header-account-avatar-fallback">${escapeHtml(getInitials(displayName))}</span>`
-        : '<span class="header-account-avatar-fallback"><svg class="header-login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></span>';
-    headerButton.setAttribute('aria-label', user ? `${displayName}さんのマイページ` : 'ログイン');
+    headerButton.innerHTML = getAccountIconMarkup();
+    headerButton.setAttribute('aria-label', user ? displayName + 'さんのプロフィールを開く' : 'ログインプロフィールを開く');
+    closeAccountPopover();
   }
   const el = document.getElementById('auth-fab');
   if (!el) return;
@@ -2084,22 +2090,28 @@ function renderAuthFab() {
 
 
 async function saveCloudProgress() {
-  if (!auth.currentUser) return;
+  const user = auth.currentUser;
+  if (!user || !cloudRestoreComplete) return false;
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return;
   try {
     await db.collection('users').doc(auth.currentUser.uid).set({
+      schoolCode: getSchoolCode() || null,
+      schoolName: getSchoolName() || null,
       kobunAppState: raw,
       kobunAppStateUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       profileNickname: getPublicNickname(auth.currentUser)
     }, { merge: true });
+    return true;
   } catch (e) {
     console.warn('saveCloudProgress error:', e);
+    showSyncStatus('同期できませんでした。設定の「今すぐ同期」から再試行できます。', true);
+    return false;
   }
 }
 
 function queueCloudProgressSave() {
-  if (!auth.currentUser) return;
+  if (!auth.currentUser || !cloudRestoreComplete) return;
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(() => {
     saveCloudProgress();
@@ -2107,9 +2119,11 @@ function queueCloudProgressSave() {
 }
 
 async function restoreCloudProgress() {
-  if (!auth.currentUser) return false;
+  const user = auth.currentUser;
+  if (!user) return false;
   try {
-    const snap = await db.collection('users').doc(auth.currentUser.uid).get();
+    const snap = await db.collection('users').doc(user.uid).get({ source: 'server' });
+    if (auth.currentUser?.uid !== user.uid) return false;
     if (!snap.exists) return false;
     const data = snap.data() || {};
     if (!data.kobunAppState) return false;
@@ -2125,7 +2139,8 @@ async function restoreCloudProgress() {
     return false;
   } catch (e) {
     console.warn('restoreCloudProgress error:', e);
-    return false;
+    showSyncStatus('クラウド記録を確認できませんでした。接続後に再同期してください。', true);
+    throw e;
   }
 }
 
@@ -2169,7 +2184,7 @@ async function loadAccountProfile() {
     const snap = await db.collection('users').doc(auth.currentUser.uid).get();
     const data = snap.exists ? (snap.data() || {}) : {};
     const remoteNickname = String(data.profileNickname || data.nickname || '').trim();
-    accountProfile = { nickname: remoteNickname };
+    accountProfile = { nickname: remoteNickname, role: data.role || 'user' };
     profileAvatarData = getStoredProfileAvatar(auth.currentUser.uid);
     if (remoteNickname && !getStoredNickname()) setStoredNickname(remoteNickname);
     if (data.schoolCode) setLocalSchoolCode(data.schoolCode, data.schoolName || '');
@@ -2421,7 +2436,7 @@ function renderRoleAccessSettingsCard(user) {
 let accountSettingsTab = 'profile';
 
 function setAccountSettingsTab(tab) {
-  if (!['profile', 'study', 'school'].includes(tab)) return;
+  if (!['profile', 'study', 'access', 'help', 'settings'].includes(tab)) return;
   accountSettingsTab = tab;
   renderAccountSettings();
 }
@@ -2437,7 +2452,9 @@ function renderAccountSettings() {
   const tabs = [
     ['profile', 'プロフィール設定'],
     ['study', '単語学習設定'],
-    ['school', '学校・アカウント']
+    ['access', 'アカウント'],
+    ['help', '使い方'],
+    ['settings', '設定']
   ];
   const tabNav = `<nav class="account-settings-tabs" aria-label="マイページ設定">${tabs.map(([id, label]) => `<button type="button" class="account-tab-button${accountSettingsTab === id ? ' active' : ''}" aria-pressed="${accountSettingsTab === id}" onclick="setAccountSettingsTab('${id}')">${label}</button>`).join('')}</nav>`;
 
@@ -2470,15 +2487,33 @@ function renderAccountSettings() {
           <div class="account-mini-box"><div class="account-mini-value">${accuracy}%</div><div class="account-mini-label">正答率</div></div>
         </div></section>`;
     }
+  } else if (accountSettingsTab === 'settings') {
+    panel = renderSchoolSettingsMenu();
+    if (signedInUser && isSchoolAdmin(user)) setTimeout(() => { loadIssuedSchoolCodes(); loadAdminDashboard(); }, 0);
+  } else if (accountSettingsTab === 'help') {
+    panel = renderLearningGuide();
   } else if (accountSettingsTab === 'study') {
     panel = `<section class="account-card"><h2 class="account-panel-title">単語学習設定</h2><p class="account-help">学習時の設定を変更できます。</p>${renderVoiceSettingsCard()}</section>`;
   } else {
-    panel = `<section class="account-card"><h2 class="account-panel-title">学校との紐づけ</h2><p class="account-help">学校IDを登録すると、学校別ランキングやクラスの出題範囲が使えます。ログイン中は所属をアカウントに保存します。</p>${renderSchoolCodeSettings()}${signedInUser ? renderRoleAccessSettingsCard(user) : '<button class="btn btn-primary" type="button" onclick="login()">学校をアカウントに登録するにはログイン</button>'}</section>`;
+    panel = '<section class="account-card"><h2 class="account-panel-title">アカウント</h2><button class="btn btn-primary" type="button" onclick="syncLearningNow(this)">今すぐ同期</button>' + (signedInUser ? '<button class="btn btn-secondary" type="button" onclick="logout()">ログアウト</button>' : '<button class="btn btn-primary" type="button" onclick="login()">ログイン・新規登録へ</button>') + '</section>' + (signedInUser ? renderRoleAccessSettingsCard(user) : '');
   }
 
   el.innerHTML = `<div class="account-greeting"><span class="account-greeting-kicker">MY PAGE</span><h1>${signedInUser ? `こんにちは、${escapeHtml(nickname)}さん` : 'ログインしよう'}</h1><p>${signedInUser ? '学習の設定やプロフィールをここで管理できます。' : 'ログインすると、学習記録を保存して続きから学べます。'}</p></div>${tabNav}<div class="account-tab-panel" role="region" aria-live="polite">${panel}</div>`;
-  if (signedInUser && accountSettingsTab === 'school') setTimeout(() => { loadIssuedSchoolCodes(); loadAdminDashboard(); }, 0);
+
 }
+function renderSchoolSettingsMenu() {
+  const user = auth.currentUser;
+  const admin = !!user && isSchoolAdmin(user);
+  const teacher = !!user && accountProfile.role === 'teacher';
+  return '<section class="account-card settings-menu"><h2>設定</h2><div class="settings-menu-grid">'
+    + '<button class="btn btn-secondary" onclick="setAccountSettingsTab(&quot;study&quot;)">学習の詳細設定</button>'
+    + '<button class="btn btn-secondary" onclick="setAccountSettingsTab(&quot;access&quot;)">アカウント・同期</button>'
+    + '<button class="btn btn-secondary" onclick="setAccountSettingsTab(&quot;help&quot;)">使い方</button>'
+    + (teacher || admin ? '<a class="btn btn-secondary" href="./teacher.html">学校の学習状況</a>' : '')
+    + (admin ? '<a class="btn btn-primary" href="./admin.html">学校ロゴ・学校の詳細設定</a><a class="btn btn-secondary" href="./admin.html#admin-user-search">管理者設定・先生ロール</a>' : '')
+    + '</div></section>' + (admin ? renderSchoolCodeSettings().slice(renderSchoolCodeSettings().indexOf('<div class="account-card school-admin-card">')) : '');
+}
+
 function loadProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -3945,6 +3980,8 @@ async function logout(){
 }
 
 auth.onAuthStateChanged(async user => {
+  cloudRestoreComplete = false;
+  clearTimeout(cloudSaveTimer);
   if (user) {
     if (await enforceUserSuspendedState(user)) return;
     await loadAccountProfile();
@@ -3953,7 +3990,14 @@ auth.onAuthStateChanged(async user => {
       renderClassStudyShortcut();
     renderAuthFab();
     console.log('ログイン:', user.uid);
-    await restoreCloudProgress();
+    try {
+      await restoreCloudProgress();
+      if (auth.currentUser?.uid !== user.uid) return;
+      cloudRestoreComplete = true;
+      await saveCloudProgress();
+      renderClassStudyShortcut();
+      if (document.getElementById('screen-home')?.classList.contains('active')) showHome();
+    } catch (error) { /* Never overwrite remote data after a failed restore. */ }
     await syncLeaderboardProfile();
     await fetchLeaderboard();
     renderHomeRankingPanel();
@@ -4008,9 +4052,22 @@ window.addEventListener('beforeunload', () => {
     nav.classList.toggle('hidden', id === 'screen-quiz');
     nav.querySelectorAll('button[data-target]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.target === id);
+      if (btn.dataset.target === id) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
       if (btn.dataset.target === 'screen-account') btn.querySelector('span:last-child').textContent = auth.currentUser || activeClassAssignment?.local ? 'マイページ' : 'ログイン';
     });
+    requestAnimationFrame(() => positionGlass(nav));
     updateRoleNavButtons();
+  }
+
+  function positionGlass(nav){
+    const active = nav.querySelector('button.active');
+    nav.style.setProperty('--glass-visible', active ? '1' : '0');
+    if (!active || !nav.offsetWidth) return;
+    nav.style.setProperty('--glass-x', active.offsetLeft + 'px');
+    nav.style.setProperty('--glass-y', active.offsetTop + 'px');
+    nav.style.setProperty('--glass-width', active.offsetWidth + 'px');
+    nav.style.setProperty('--glass-height', active.offsetHeight + 'px');
   }
 
   function buildBottomNav(){
@@ -4027,6 +4084,7 @@ window.addEventListener('beforeunload', () => {
       <button type="button" data-target="screen-account" onclick="showAccountTab()">${icon('<circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>')}<span>ログイン</span></button>
     `;
     document.body.appendChild(nav);
+    new ResizeObserver(() => positionGlass(nav)).observe(nav);
   }
 
   function wrapScreenFunction(name){
@@ -4593,3 +4651,80 @@ function initOfflineSupportUI() {
 
 
 /* Study Dashboard UI placeholder */
+
+function getAccountIconMarkup() {
+  const source = profileAvatarData || 'assets/icons/icon-128.webp';
+  return '<img class="header-account-avatar" src="' + source + '" alt="">';
+}
+function closeAccountPopover(restoreFocus = false) {
+  document.getElementById('account-popover')?.remove();
+  const button = document.getElementById('header-account-button');
+  button?.setAttribute('aria-expanded', 'false');
+  if (restoreFocus) button?.focus();
+}
+function toggleAccountPopover() {
+  if (document.getElementById('account-popover')) { closeAccountPopover(true); return; }
+  const button = document.getElementById('header-account-button');
+  const user = auth.currentUser;
+  const school = getSchoolName();
+  const panel = document.createElement('section');
+  panel.id = 'account-popover';
+  panel.className = 'account-popover';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'ログインプロフィール');
+  const name = user && !user.isAnonymous ? getPublicNickname(user) : school || 'ゲスト';
+  panel.innerHTML = '<button class="profile-close" type="button" aria-label="プロフィールを閉じる" onclick="closeAccountPopover(true)">×</button>'
+    + '<div class="profile-popup-avatar">' + getAccountIconMarkup() + '</div><h2>' + escapeHtml(name) + '</h2>'
+    + (school ? '<div class="profile-school">' + escapeHtml(school) + '</div>' : '')
+    + '<div class="profile-popup-actions">'
+    + (user && !user.isAnonymous ? '<button class="btn btn-primary" type="button" onclick="closeAccountPopover();showAccountTab()">マイページ・設定</button><button class="btn btn-secondary" type="button" onclick="closeAccountPopover();logout()">ログアウト</button>' : '<button class="btn btn-primary" type="button" onclick="closeAccountPopover();login()">ログイン・新規登録</button><a class="btn btn-secondary" href="./login.html?method=school">学校IDで参加</a><button class="btn btn-secondary" type="button" onclick="closeAccountPopover();showAccountTab()">設定・使い方</button>')
+    + '</div>';
+  document.body.appendChild(panel);
+  button.setAttribute('aria-expanded', 'true');
+  panel.querySelector('button').focus();
+}
+document.addEventListener('pointerdown', event => {
+  if (!event.target.closest('#account-popover,#header-account-button')) closeAccountPopover();
+});
+document.addEventListener('keydown', event => {
+  const panel = document.getElementById('account-popover');
+  if (!panel) return;
+  if (event.key === 'Escape') { closeAccountPopover(true); return; }
+  if (event.key === 'Tab') {
+    const controls = [...panel.querySelectorAll('button,a[href]')];
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+});
+function replayLearningTutorial() { onboardingStep = 1; renderOnboarding(); }
+function renderLearningGuide() {
+  return '<section class="account-card learning-guide"><h2>使い方</h2>'
+    + onboardingTutorial.map(([title, text]) => '<details><summary>' + escapeHtml(title) + '</summary><p>' + escapeHtml(text) + '</p></details>').join('')
+    + '<details><summary>学校IDで学習する</summary><p>ログイン画面で「学校IDで参加」を選び、配布された学校IDを入力します。学校が設定した範囲は学習ホームの上部に表示されます。メールまたはGoogleで連携すると、記録を別の端末でも使えます。先生・管理者の操作は専用ページで行います。</p></details>'
+    + '<details><summary>アカウントと学習記録</summary><p>ログインなしではこの端末に記録します。メールとパスワード、またはGoogleでログインすると記録を同期できます。Googleのみで登録した場合はGoogleでログインしてください。</p></details>'
+    + '<button class="btn btn-primary" type="button" onclick="replayLearningTutorial()">チュートリアルを見る</button></section>';
+}
+
+async function syncLearningNow(button) {
+  const user = auth.currentUser;
+  if (!user) { showSyncStatus('記録の同期にはログインが必要です', true); return false; }
+  if (button) button.disabled = true;
+  clearTimeout(cloudSaveTimer);
+  try {
+    await restoreCloudProgress();
+    if (auth.currentUser?.uid !== user.uid) return false;
+    cloudRestoreComplete = true;
+    const saved = await saveCloudProgress();
+    if (saved) showSyncStatus('学習記録を同期しました');
+    return saved;
+  } catch (error) { cloudRestoreComplete = false; return false; }
+  finally { if (button) button.disabled = false; }
+}
+window.addEventListener('online', () => { if (auth.currentUser) syncLearningNow(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && auth.currentUser && cloudRestoreComplete) {
+    clearTimeout(cloudSaveTimer);
+    saveCloudProgress();
+  }
+});
