@@ -7,6 +7,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn()
+        && request.auth.token.email_verified == true
         && request.auth.token.email == 'yuki.1092.mkupo1216.m@gmail.com';
     }
 
@@ -17,7 +18,8 @@ service cloud.firestore {
     function isTeacher() {
       return signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'teacher'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('schoolCode', null) != null;
     }
 
     function ownerCannotChangeAdminFields() {
@@ -34,12 +36,14 @@ service cloud.firestore {
     }
 
     function ownerCanChangeSchoolCode() {
-      return request.resource.data.schoolCode == resource.data.schoolCode
-        || request.resource.data.schoolCode == null
-        || (resource.data.schoolCode == null
-          && request.resource.data.schoolCode is string
-          && exists(/databases/$(database)/documents/schoolCodes/$(request.resource.data.schoolCode))
-          && get(/databases/$(database)/documents/schoolCodes/$(request.resource.data.schoolCode)).data.active != false);
+      return (resource.data.get('role', 'user') != 'teacher'
+        || request.resource.data.get('schoolCode', null) == resource.data.get('schoolCode', null))
+        && ( request.resource.data.get('schoolCode', null) == resource.data.get('schoolCode', null)
+        || request.resource.data.get('schoolCode', null) == null
+        || (resource.data.get('schoolCode', null) == null
+          && request.resource.data.get('schoolCode', null) is string
+          && exists(/databases/$(database)/documents/schoolCodes/$(request.resource.data.get('schoolCode', null)))
+          && get(/databases/$(database)/documents/schoolCodes/$(request.resource.data.get('schoolCode', null))).data.active != false));
     }
 
     function ownerCreateSafe() {
@@ -82,12 +86,12 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin()
         || (isTeacher()
-          && resource.data.schoolCode == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolCode);
+          && resource.data.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolCode);
       allow create: if isAdmin() || (isOwner(uid) && ownerCreateSafe()
-        && (request.resource.data.schoolCode == null
-          || (request.resource.data.schoolCode is string
-            && exists(/databases/$(database)/documents/schoolCodes/$(request.resource.data.schoolCode))
-            && get(/databases/$(database)/documents/schoolCodes/$(request.resource.data.schoolCode)).data.active != false)));
+        && (request.resource.data.get('schoolCode', null) == null
+          || (request.resource.data.get('schoolCode', null) is string
+            && exists(/databases/$(database)/documents/schoolCodes/$(request.resource.data.get('schoolCode', null)))
+            && get(/databases/$(database)/documents/schoolCodes/$(request.resource.data.get('schoolCode', null))).data.active != false)));
       allow update: if isAdmin() || (isOwner(uid)
         && ownerCannotChangeAdminFields()
         && ownerCanChangeSchoolCode());
@@ -98,13 +102,15 @@ service cloud.firestore {
     match /rankings/{uid} {
       allow read: if isAdmin() || (signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && resource.data.schoolCode == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolCode);
+        && resource.data.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolCode);
       allow create, update: if isOwner(uid) || isAdmin();
       allow delete: if isOwner(uid) || isAdmin();
     }
 
     match /rankingsKobun/{uid} {
-      allow read: if signedIn();
+      allow read: if isOwner(uid) || isAdmin() || (signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && resource.data.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('schoolCode', null));
       allow create, update: if isOwner(uid) || isAdmin();
       allow delete: if isOwner(uid) || isAdmin();
     }

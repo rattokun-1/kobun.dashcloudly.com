@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ことのは単語 5訂版</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/main.css?v=2.0">
+<link rel="stylesheet" href="assets/css/main.css?v=20261010-performance-v3.2">
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 
 <link rel="manifest" href="manifest.json">
@@ -19,7 +21,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ことのは単語">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="assets/icons/icon.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <meta name="app-version" content="2026.09.25-v1.7">
 
 
@@ -34,7 +36,7 @@
         <div class="header-title">ことのは単語</div>
         <div class="header-sub">読んで見て覚える 重要古文単語315 全339語</div>
       </div>
-      <button type="button" id="header-account-button" class="header-account-button" onclick="showAccountTab()" aria-label="ログインまたはマイページを開く"></button>
+      <button type="button" id="header-account-button" class="header-account-button" onclick="toggleAccountPopover()" aria-label="ログインプロフィールを開く" aria-haspopup="dialog" aria-expanded="false" aria-controls="account-popover"></button>
     </div>
     <div class="content">
       <div id="home-class-study"></div>
@@ -381,14 +383,14 @@
   margin-top:40px;
   padding:24px 20px;
   background:rgba(255,255,255,0.9);
-  border-top:1px solid #dce4ec;
+  border-top:1px solid #dedee3;
   backdrop-filter:blur(8px);
   text-align:center;
 ">
   <div style="
     font-family:'Playfair Display', serif;
     font-size:18px;
-    color:#d4af37;
+    color:#7652a8;
     font-weight:bold;
     letter-spacing:0.5px;
     margin-bottom:6px;
@@ -398,7 +400,7 @@
 
   <div style="
     font-size:11px;
-    color:#6c7a89;
+    color:#626269;
     margin-bottom:10px;
   ">
     読んで見て覚える 重要古文単語315 学習サポートツール
@@ -407,13 +409,13 @@
   <div style="
     width:60px;
     height:1px;
-    background:#dce4ec;
+    background:#dedee3;
     margin:0 auto 10px auto;
   "></div>
 
   <div style="
     font-size:12px;
-    color:#6c7a89;
+    color:#626269;
     line-height:1.7;
   ">
     本サイトは個人が運営する非公式ツールであり、<br>
@@ -422,6 +424,6 @@
 </footer>
 
 
-<script src="assets/js/app.js?v=2.0"></script>
+<script defer src="assets/js/app.js?v=20261010-performance-v3.2"></script>
 </body>
 </html>

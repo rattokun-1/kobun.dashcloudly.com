@@ -1,3 +1,11 @@
-﻿node_modules/
+node_modules/
 .firebase/
 .env*
+!.env.example
+*debug.log*
+*.pem
+*.key
+*service-account*.json
+*serviceAccount*.json
+.DS_Store
+Thumbs.db

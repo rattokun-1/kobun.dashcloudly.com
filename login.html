@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f4f6fa">
+  <meta name="theme-color" content="#7652a8">
   <title>ログイン | DashCloudly 学習ID</title>
-  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/main.css?v=20261010-performance-v3.2">
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -14,16 +14,17 @@
   <main class="google-login-shell">
     <a class="login-back-link" href="./index.html">← 学習画面に戻る</a>
     <section class="google-login-card" aria-labelledby="login-title">
-      <div class="login-brand-mark" aria-hidden="true">D</div>
+      <div class="login-brand-mark" aria-hidden="true"><img src="assets/icons/icon-128.webp" alt=""></div>
 
       <div id="email-step" class="login-step">
         <h1 id="login-title">ログイン</h1>
         <p class="google-login-subtitle">DashCloudly 学習IDで続ける</p>
         <p class="login-account-note">シス単マスター・ことのは単語で共通して利用できます。</p>
+        <p class="login-guide">ログインすると学習記録を同期できます。メール・Google・学校IDから方法を選んでください。</p>
         <form id="email-form" novalidate>
           <label class="google-field-label" for="email-input">メールアドレス</label>
           <input id="email-input" class="google-login-input" type="email" autocomplete="username" inputmode="email" required placeholder="メールアドレスを入力">
-          <button type="submit" class="google-primary-button">次へ</button>
+          <button type="submit" class="google-primary-button">メールアドレスで続ける →</button>
         </form>
         <button type="button" class="google-account-create-link" id="signup-from-email">アカウントを作成</button>
         <div class="google-or"><span>または</span></div>
@@ -31,7 +32,7 @@
           <svg class="google-g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.8 6.1-14.9Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.7l-6.6-5c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.6 27.9a12 12 0 0 1 0-7.8v-5.2H5.8a20 20 0 0 0 0 18.2l6.8-5.2Z"/><path fill="#EA4335" d="M24 11.7c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 5.7 29.5 4 24 4A20 20 0 0 0 5.8 14.9l6.8 5.2c1.6-4.8 6.1-8.4 11.4-8.4Z"/></svg>
           <span>Google で続行</span>
         </button>
-        <button type="button" class="google-school-link" id="open-school-step">学校IDでサインイン</button>
+        <button type="button" class="google-school-link" id="open-school-step">学校IDで参加</button>
       </div>
 
       <div id="password-step" class="login-step" hidden>
@@ -49,7 +50,7 @@
 
       <div id="school-step" class="login-step" hidden>
         <button type="button" class="google-back-button" data-back-email aria-label="ログイン方法に戻る">←</button>
-        <h1>学校IDでサインイン</h1>
+        <h1>学校IDで参加</h1>
         <p class="google-login-subtitle">学校から配布されたIDを入力してください。</p>
         <form id="school-form" novalidate>
           <label class="google-field-label" for="school-id-input">学校ID</label>
@@ -75,6 +76,7 @@
 
       <div id="login-message" class="login-message" role="status" aria-live="polite"></div>
     </section>
+    <a class="login-guest-link" href="./index.html">ログインせずに学習を始める →</a>
     <footer class="google-login-footer">DashCloudly 学習ID</footer>
   </main>
   <div id="login-busy-overlay" class="login-busy-overlay" hidden aria-live="polite" aria-busy="true">
@@ -114,6 +116,10 @@
       showMessage();
       if (id === 'password-step') $('password-input').focus();
       if (id === 'email-step') $('email-input').focus();
+      if (id === 'school-step') $('school-id-input').focus();
+      const heading = $(id).querySelector('h1');
+      if (!heading.id) heading.id = id + '-title';
+      document.querySelector('.google-login-card').setAttribute('aria-labelledby', heading.id);
     };
     let redirecting = false;
     const busyOverlay = $('login-busy-overlay');
@@ -141,11 +147,12 @@
         'auth/invalid-email': 'メールアドレスの形式を確認してください。',
         'auth/user-not-found': 'メールアドレスまたはパスワードを確認してください。',
         'auth/wrong-password': 'メールアドレスまたはパスワードを確認してください。',
-        'auth/invalid-credential': 'メールアドレスまたはパスワードを確認してください。',
+        'auth/invalid-credential': 'メールアドレス・パスワードを確認してください。Googleで登録した場合は「Google で続行」を選んでください。',
         'auth/email-already-in-use': 'このメールアドレスは登録済みです。ログインしてください。',
         'auth/weak-password': 'パスワードは6文字以上にしてください。',
         'auth/popup-closed-by-user': 'ログイン画面が閉じられました。',
         'auth/credential-already-in-use': 'このメールアドレスは別のアカウントで使用中です。ログイン後、マイページで学校IDを登録してください。',
+        'permission-denied': '学校情報へのアクセスが拒否されました。管理者に設定の確認を依頼してください。',
         'school-not-found': '学校IDを確認してください。',
         'class-not-found': 'クラスIDを確認してください。'
       };
@@ -155,13 +162,13 @@
       const statusText = options.statusText || '確認しています…';
       const busyOverlayText = options.busyOverlayText || 'ログイン中…';
       const useBusyOverlay = options.useBusyOverlay === true;
-      if (button) button.disabled = true;
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
       showMessage(statusText);
       if (useBusyOverlay) showBusyOverlay(busyOverlayText);
       try { await task(); }
       catch (error) { console.warn('Sign-in step failed:', error); showMessage(authMessage(error), true); }
       finally {
-        if (button) button.disabled = false;
+        if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
         if (useBusyOverlay && !redirecting) hideBusyOverlay();
       }
     }
@@ -225,8 +232,7 @@
       await withBusy(button, async () => {
         verifiedEmail = email;
         $('chosen-email').textContent = email;
-        try { await auth.fetchSignInMethodsForEmail(email); }
-        catch (error) { console.warn('Email verification lookup unavailable:', error); }
+        $('password-input').value = '';
         showStep('password-step');
       });
     });
@@ -291,18 +297,29 @@
         if (!schoolSnap.exists || schoolSnap.data()?.active === false) throw Object.assign(new Error(), { code: 'school-not-found' });
         const school = schoolSnap.data() || {};
 
-        if (!auth.currentUser) await auth.signInAnonymously();
+        let local = false;
+        if (!auth.currentUser) {
+          try { await auth.signInAnonymously(); }
+          catch (error) {
+            if (!['auth/operation-not-allowed', 'auth/admin-restricted-operation', 'auth/configuration-not-found'].includes(error.code)) throw error;
+            local = true;
+          }
+        }
         const schoolName = String(school.schoolName || school.name || '').trim().slice(0, 40);
         schoolSession = { schoolId, schoolName };
         await attachSchoolToCurrentUser();
+        localStorage.setItem('systan_school_code_v1', schoolId);
+        localStorage.setItem('systan_school_name_v1', schoolName);
         const logo = typeof school.schoolLogoData === 'string' && school.schoolLogoData.length <= 260000 && /^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/.test(school.schoolLogoData) ? school.schoolLogoData : '';
         if (logo) localStorage.setItem('systan_school_logo_v1_' + schoolId, logo);
+        const brandImage = document.querySelector('.login-brand-mark img');
+        brandImage.src = logo || 'assets/icons/icon-128.webp';
         const range = school;
         const startId = Number(range.startId), endId = Number(range.endId);
         const validRange = Number.isInteger(startId) && Number.isInteger(endId) && startId >= 1 && endId <= 339 && startId <= endId;
-        localStorage.setItem('systan_class_session_v1', JSON.stringify({ uid: auth.currentUser.uid, local: false, schoolId, classId: '', startId: validRange ? startId : null, endId: validRange ? endId : null, schoolName, className: '' }));
+        localStorage.setItem('systan_class_session_v1', JSON.stringify({ uid: auth.currentUser?.uid || null, local, schoolId, classId: '', startId: validRange ? startId : null, endId: validRange ? endId : null, schoolName, className: '' }));
         $('school-welcome-title').textContent = schoolName || '学校でサインインしました';
-        $('school-welcome-subtitle').textContent = '学校のアカウントでログイン中です。通常のアカウントを連携すると、別の端末でも学習記録を利用できます。';
+        $('school-welcome-subtitle').textContent = local ? '学校IDを確認しました。学習記録はこの端末に保存されます。メールまたはGoogleで連携すると別の端末でも利用できます。' : '学校のアカウントでログイン中です。通常のアカウントを連携すると、別の端末でも学習記録を利用できます。';
         const preview = $('school-logo-preview');
         if (logo) {
           const image = document.createElement('img');
@@ -314,6 +331,7 @@
         showStep('school-success-step');
       });
     });
+    if (query.get('method') === 'school') showStep('school-step');
     $('school-continue').addEventListener('click', finish);
     $('school-email-link').addEventListener('click', () => showStep('email-step'));
   </script>

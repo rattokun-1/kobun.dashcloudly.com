@@ -8,17 +8,17 @@
   <style>
     :root {
       --bg1: #f7f9fc;
-      --bg2: #eef3f8;
+      --bg2: #f4eef8;
       --card: rgba(255,255,255,0.94);
-      --text: #243447;
-      --sub: #6f7f91;
-      --accent: #7652a8;
-      --accent2: #a98118;
-      --blue: #3498db;
-      --green: #2ecc71;
-      --red: #e74c3c;
-      --border: #dde7f0;
-      --shadow: 0 22px 70px rgba(36, 52, 71, 0.14);
+      --text: #3a2447;
+      --sub: #808080;
+      --accent: #8752a8;
+      --accent2: #6a3889;
+      --blue: #9355ba;
+      --green: #8949b2;
+      --red: #9c64bf;
+      --border: #e9ddf0;
+      --shadow: 0 22px 70px rgba(58,36,71, 0.14);
     }
     * { box-sizing: border-box; }
     body {
@@ -27,8 +27,8 @@
       font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(201,162,39,.20), transparent 32%),
-        radial-gradient(circle at bottom right, rgba(52,152,219,.14), transparent 30%),
+        radial-gradient(circle at top left, rgba(132,70,170,.20), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(147,85,186,.14), transparent 30%),
         linear-gradient(135deg, var(--bg1), var(--bg2));
       display: grid;
       place-items: center;
@@ -50,7 +50,7 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 5px;
-      background: linear-gradient(90deg, var(--accent), rgba(52,152,219,.65));
+      background: linear-gradient(90deg, var(--accent), rgba(147,85,186,.65));
     }
     .badge {
       display: inline-flex;
@@ -59,8 +59,8 @@
       padding: 8px 13px;
       border-radius: 999px;
       color: var(--accent2);
-      background: rgba(201,162,39,.13);
-      border: 1px solid rgba(201,162,39,.28);
+      background: rgba(132,70,170,.13);
+      border: 1px solid rgba(132,70,170,.28);
       font-size: 12px;
       font-weight: 800;
       letter-spacing: .06em;
@@ -85,7 +85,7 @@
       padding: 14px 16px;
       border: 1px solid var(--border);
       border-radius: 16px;
-      background: #fff;
+      background: #ffffff;
       margin: 18px 0 22px;
       font-weight: 700;
       line-height: 1.6;
@@ -95,11 +95,11 @@
       height: 12px;
       border-radius: 50%;
       background: var(--blue);
-      box-shadow: 0 0 0 6px rgba(52,152,219,.12);
+      box-shadow: 0 0 0 6px rgba(147,85,186,.12);
       flex: none;
     }
-    .status.done .dot { background: var(--green); box-shadow: 0 0 0 6px rgba(46,204,113,.12); }
-    .status.warn .dot { background: var(--red); box-shadow: 0 0 0 6px rgba(231,76,60,.12); }
+    .status.done .dot { background: var(--green); box-shadow: 0 0 0 6px rgba(137,73,178,.12); }
+    .status.warn .dot { background: var(--red); box-shadow: 0 0 0 6px rgba(156,100,191,.12); }
     .grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -107,7 +107,7 @@
       margin: 20px 0 24px;
     }
     .step {
-      background: #fff;
+      background: #ffffff;
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 16px;
@@ -117,7 +117,7 @@
       width: 28px;
       height: 28px;
       border-radius: 10px;
-      background: rgba(52,152,219,.10);
+      background: rgba(147,85,186,.10);
       color: var(--blue);
       display: grid;
       place-items: center;
@@ -148,9 +148,9 @@
       transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
     }
     button:active, .linkbtn:active { transform: scale(.97); }
-    .primary { background: var(--accent); color: #fff; box-shadow: 0 10px 24px rgba(201,162,39,.22); }
-    .secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
-    .danger { background: rgba(231,76,60,.10); color: var(--red); border: 1px solid rgba(231,76,60,.22); }
+    .primary { background: var(--accent); color: #ffffff; box-shadow: 0 10px 24px rgba(132,70,170,.22); }
+    .secondary { background: #ffffff; color: var(--text); border: 1px solid var(--border); }
+    .danger { background: rgba(156,100,191,.10); color: var(--red); border: 1px solid rgba(156,100,191,.22); }
     .smallnote {
       margin-top: 18px;
       color: var(--sub);
@@ -176,7 +176,7 @@
       height: 7px;
       border-radius: 999px;
       overflow: hidden;
-      background: #e7eef6;
+      background: #f0e8f5;
       margin-top: 12px;
     }
     .progressbar > span {
