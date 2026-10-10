@@ -6184,3 +6184,44 @@ body:not(.login-page):not(.is-quiz-active) { padding-bottom:calc(100px + env(saf
 .app-header .school-brand-logo { width:280px; max-width:100%; height:44px; min-height:44px; max-height:44px; object-fit:contain; object-position:left center; }
 .app-header .header-sub { height:16px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .header-account-avatar { object-fit:cover; }
+
+/* Compact account navigation with the same glass and spring motion as the dock. */
+#screen-account .account-settings-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; background:transparent; padding:0; }
+#screen-account .account-tab-button,
+#screen-account .btn,
+#screen-account .avatar-picker,
+.google-login-card .google-primary-button,
+.google-login-card .google-provider-button {
+  position:relative; isolation:isolate; overflow:hidden; min-height:48px; min-width:0;
+  border:1px solid rgba(255,255,255,.85); border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(238,238,242,.68));
+  color:var(--text); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:0 6px 20px rgba(30,30,40,.09),inset 0 1px 2px rgba(255,255,255,.95),inset 0 -1px 2px rgba(255,255,255,.45);
+  transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s,border-color .25s,background .25s;
+  white-space:normal; overflow-wrap:anywhere;
+}
+#screen-account .account-tab-button::before,
+#screen-account .btn::before,
+.google-login-card .google-primary-button::before,
+.google-login-card .google-provider-button::before {
+  content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+  background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.65) 48%,transparent 75%);
+  transform:translateX(-130%); transition:transform .65s cubic-bezier(.22,1,.36,1);
+}
+#screen-account .account-tab-button.active,#screen-account .btn-primary,.google-login-card .google-primary-button {
+  background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 18%,white),rgba(255,255,255,.78));
+  color:var(--gold2); border-color:color-mix(in srgb,var(--gold) 35%,white);
+}
+@media(hover:hover) {
+  #screen-account .account-tab-button:hover,#screen-account .btn:hover,.google-login-card .google-primary-button:hover,.google-login-card .google-provider-button:hover { transform:translateY(-2px); box-shadow:0 10px 26px rgba(30,30,40,.14),inset 0 1px 2px #fff; }
+  #screen-account .account-tab-button:hover::before,#screen-account .btn:hover::before,.google-login-card .google-primary-button:hover::before,.google-login-card .google-provider-button:hover::before { transform:translateX(130%); }
+}
+#screen-account .account-tab-button:active,#screen-account .btn:active,.google-login-card .google-primary-button:active,.google-login-card .google-provider-button:active { transform:scale(.96); }
+#screen-account .account-subpanel-back { display:inline-flex; align-items:center; min-height:44px; padding:8px 0; color:var(--gold2); font:600 14px/1.4 system-ui,sans-serif; }
+#screen-account .account-login-prompt .btn { width:100%; }
+#screen-account .settings-menu-grid { grid-template-columns:1fr; }
+#screen-account .school-settings-disclosure > summary { cursor:pointer; padding:14px; min-height:48px; font-weight:700; }
+@media(prefers-reduced-motion:reduce) {
+  #screen-account .account-tab-button,#screen-account .btn,#screen-account .avatar-picker,.google-login-card .google-primary-button,.google-login-card .google-provider-button,
+  #screen-account .account-tab-button::before,#screen-account .btn::before,.google-login-card .google-primary-button::before,.google-login-card .google-provider-button::before { transition:none; }
+}
