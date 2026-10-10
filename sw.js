@@ -1,5 +1,5 @@
 /* ことのは単語 PWA Service Worker */
-const CACHE_VERSION = '20261010-performance-v3.2';
+const CACHE_VERSION = '20261010-security-v3.3';
 const CACHE_NAME = 'kobun-master-' + CACHE_VERSION;
 
 const APP_SHELL = [

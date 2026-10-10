@@ -1,12 +1,15 @@
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, FieldValue, FieldPath } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
 const crypto = require('node:crypto');
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 
-admin.initializeApp();
-const firestore = admin.firestore();
+initializeApp();
+const firestore = getFirestore();
 const ADMIN_EMAIL = 'yuki.1092.mkupo1216.m@gmail.com';
-const stamp = () => admin.firestore.FieldValue.serverTimestamp();
+const stamp = () => FieldValue.serverTimestamp();
 const noticeId = value => crypto.createHash('sha256').update(value).digest('hex').slice(0, 32);
 const range = data => {
   const start = Number(data?.startId), end = Number(data?.endId);
@@ -94,7 +97,7 @@ async function deliverToTokens(noticeRef, data, scope) {
     : firestore.collection('pushTokens').where('active','==',true);
   let cursor, successCount = 0, failureCount = 0;
   do {
-    let pageQuery = query.orderBy(admin.firestore.FieldPath.documentId()).limit(500);
+    let pageQuery = query.orderBy(FieldPath.documentId()).limit(500);
     if (cursor) pageQuery = pageQuery.startAfter(cursor);
     const page = await pageQuery.get();
     if (page.empty) break;
@@ -103,7 +106,7 @@ async function deliverToTokens(noticeRef, data, scope) {
       (!scope || !data.classId || doc.get('classId') === data.classId) &&
       typeof doc.get('token') === 'string' && doc.get('token').length > 20);
     if (docs.length) {
-      const response = await admin.messaging().sendEachForMulticast({
+      const response = await getMessaging().sendEachForMulticast({
         tokens:docs.map(doc => doc.get('token')),
         data:{ title, body, type:String(data.type || 'admin_notice'), noticeId:noticeRef.id,
           schoolId:String(data.schoolId || ''), classId:String(data.classId || '') },
@@ -136,7 +139,11 @@ exports.sendInstalledAppNotification = onDocumentCreated('pushNotifications/{not
   const snap = event.data;
   if (!snap) return;
   const data = snap.data() || {};
-  if (data.createdByEmail !== ADMIN_EMAIL || data.target !== 'installed') {
+  let creator = null;
+  if (typeof data.createdByUid === 'string') {
+    try { creator = await getAuth().getUser(data.createdByUid); } catch { /* reject unknown creator */ }
+  }
+  if (!creator || creator.disabled || !creator.emailVerified || creator.email !== ADMIN_EMAIL || data.target !== 'installed') {
     await snap.ref.set({status:'rejected',reason:'not_admin_or_invalid_target',processedAt:stamp()},{merge:true});
     return;
   }
