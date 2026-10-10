@@ -15,8 +15,35 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Profile records carry suspension state and cannot be deleted by their owner.
+    function activeUser() {
+      return signedIn() && (!exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabledInApp', false) != true);
+    }
+
+    function validRanking(uid, maximum) {
+      let d = request.resource.data;
+      let allowed = ['uid', 'nickname', 'name', 'photoURL', 'mastered', 'done',
+        'totalAnswered', 'totalCorrect', 'totalWrong', 'accuracy', 'schoolCode', 'schoolName', 'updatedAt'];
+      return (resource == null ? d.keys().hasOnly(allowed)
+        : d.diff(resource.data).affectedKeys().hasOnly(allowed))
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && d.get('uid', '') == uid
+        && d.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(uid)).data.get('schoolCode', null)
+        && d.get('nickname', '') is string && d.get('nickname', '').size() <= 80
+        && d.get('name', '') is string && d.get('name', '').size() <= 80
+        && d.get('photoURL', '') == ''
+        && (d.get('schoolName', null) == null || (d.schoolName is string && d.schoolName.size() <= 80))
+        && d.mastered is int && d.mastered >= 0 && d.mastered <= maximum
+        && d.done is int && d.done >= d.mastered && d.done <= maximum
+        && d.totalAnswered is int && d.totalAnswered >= 0 && d.totalAnswered <= 1000000000
+        && d.totalCorrect is int && d.totalCorrect >= 0 && d.totalCorrect <= d.totalAnswered
+        && d.totalWrong is int && d.totalWrong >= 0 && d.totalWrong <= d.totalAnswered
+        && d.accuracy is number && d.accuracy >= 0 && d.accuracy <= 100;
+    }
+
     function isTeacher() {
-      return signedIn()
+      return activeUser()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'teacher'
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('schoolCode', null) != null;
@@ -87,32 +114,43 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin()
         || (isTeacher()
           && resource.data.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolCode);
-      allow create: if isAdmin() || (isOwner(uid) && ownerCreateSafe()
+      allow create: if isAdmin() || (isOwner(uid) && activeUser() && ownerCreateSafe()
         && (request.resource.data.get('schoolCode', null) == null
           || (request.resource.data.get('schoolCode', null) is string
             && exists(/databases/$(database)/documents/schoolCodes/$(request.resource.data.get('schoolCode', null)))
             && get(/databases/$(database)/documents/schoolCodes/$(request.resource.data.get('schoolCode', null))).data.active != false)));
-      allow update: if isAdmin() || (isOwner(uid)
+      allow update: if isAdmin() || (isOwner(uid) && activeUser()
         && ownerCannotChangeAdminFields()
         && ownerCanChangeSchoolCode());
-      allow delete: if isAdmin() || isOwner(uid);
+      allow delete: if isAdmin();
     }
 
     // ランキングは所属学校が一致する利用者だけ閲覧可。管理者は全件閲覧可。
     match /rankings/{uid} {
-      allow read: if isAdmin() || (signedIn()
+      allow read: if isAdmin() || (activeUser()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && resource.data.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolCode);
-      allow create, update: if isOwner(uid) || isAdmin();
-      allow delete: if isOwner(uid) || isAdmin();
+      allow create, update: if isAdmin() || (isOwner(uid) && activeUser() && validRanking(uid, 2027));
+      allow delete: if isAdmin() || (isOwner(uid) && activeUser());
     }
 
     match /rankingsKobun/{uid} {
-      allow read: if isOwner(uid) || isAdmin() || (signedIn()
+      allow read: if (isOwner(uid) && activeUser()) || isAdmin() || (activeUser()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && resource.data.get('schoolCode', null) == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('schoolCode', null));
-      allow create, update: if isOwner(uid) || isAdmin();
-      allow delete: if isOwner(uid) || isAdmin();
+      allow create, update: if isAdmin() || (isOwner(uid) && activeUser() && validRanking(uid, 339));
+      allow delete: if isAdmin() || (isOwner(uid) && activeUser());
+    }
+
+    // Append-only administrative audit records.
+    match /securityAudit/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.keys().hasOnly(['actorUid', 'action', 'targetUid', 'createdAt'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action is string && request.resource.data.action.size() <= 80
+        && request.resource.data.targetUid is string && request.resource.data.targetUid.size() <= 128
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
 
     match /{document=**} {
