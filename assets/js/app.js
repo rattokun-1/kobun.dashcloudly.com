@@ -196,7 +196,7 @@ function playFinishSound() {
 // =========================================================
 // OFFLINE CACHE / DATA SAVER
 // =========================================================
-const APP_CACHE_VERSION = '2026.10.10-performance-v3.2';
+const APP_CACHE_VERSION = '2026.10.10-account-glass-v3.4';
 
 async function registerOfflineCache() {
   if (!('serviceWorker' in navigator)) return;
@@ -2449,17 +2449,13 @@ function renderAccountSettings() {
   const nickname = !user ? '' : user.isAnonymous
     ? (getSchoolName() ? `${getSchoolName()}の学習者` : '学習者')
     : getPublicNickname(user);
-  const tabs = [
-    ['profile', 'プロフィール設定'],
-    ['study', '単語学習設定'],
-    ['access', 'アカウント'],
-    ['help', '使い方'],
-    ['settings', '設定']
-  ];
-  const tabNav = `<nav class="account-settings-tabs" aria-label="マイページ設定">${tabs.map(([id, label]) => `<button type="button" class="account-tab-button${accountSettingsTab === id ? ' active' : ''}" aria-pressed="${accountSettingsTab === id}" onclick="setAccountSettingsTab('${id}')">${label}</button>`).join('')}</nav>`;
+  const tabs = [['profile', 'プロフィール'], ['settings', '設定']];
+  const selectedTab = accountSettingsTab === 'profile' ? 'profile' : 'settings';
+  const tabNav = signedInUser ? `<nav class="account-settings-tabs" aria-label="マイページ設定">${tabs.map(([id, label]) => `<button type="button" class="account-tab-button${selectedTab === id ? ' active' : ''}" aria-pressed="${selectedTab === id}" onclick="setAccountSettingsTab('${id}')">${label}</button>`).join('')}</nav>` : '';
+
 
   let panel = '';
-  if (accountSettingsTab === 'profile') {
+  if (!signedInUser || accountSettingsTab === 'profile') {
     if (!signedInUser) {
       panel = `
         <section class="account-card account-login-prompt">
@@ -2467,7 +2463,6 @@ function renderAccountSettings() {
           <h2>ログインしよう</h2>
           <p>ログインすると、学習記録の同期やランキング、プロフィール設定が使えます。</p>
           <button class="btn btn-primary" type="button" onclick="login()">ログイン・新規登録へ</button>
-          <button class="btn btn-secondary" type="button" onclick="showHome()">学習に戻る</button>
         </section>`;
     } else {
       const stats = getTotalStats();
@@ -2478,7 +2473,7 @@ function renderAccountSettings() {
           <div class="account-hero">${renderProfileAvatar(nickname)}<div><h2 class="account-title-main">プロフィール設定</h2><p class="account-sub-main">表示名とプロフィール画像を管理できます。</p></div></div>
           <div class="account-field"><label class="account-label" for="account-nickname-input">表示名</label><input id="account-nickname-input" class="account-input" maxlength="16" value="${escapeHtml(nickname)}" placeholder="ランキングに表示する名前"><div class="account-help">最大16文字。ランキングに表示されます。</div></div>
           <div class="account-field"><div class="account-label">プロフィール画像</div><label class="avatar-picker">写真を選ぶ<input type="file" accept="image/jpeg,image/png,image/webp" onchange="changeProfileAvatar(this)"></label><div class="account-help">画像はこの端末内に保存され、ランキングには表示されません。</div></div>
-          <div class="account-actions"><button class="btn btn-primary" onclick="saveAccountNickname()">プロフィールを保存</button><button class="btn btn-secondary" onclick="logout()">ログアウト</button></div>
+          <div class="account-actions"><button class="btn btn-primary" onclick="saveAccountNickname()">プロフィールを保存</button></div>
         </section>
         <section class="account-card"><div class="ranking-meta-title">学習の状況</div><div class="account-mini-stat">
           <div class="account-mini-box"><div class="account-mini-value">${stats['◎'] || 0}</div><div class="account-mini-label">習得語数</div></div>
@@ -2498,7 +2493,8 @@ function renderAccountSettings() {
     panel = '<section class="account-card"><h2 class="account-panel-title">アカウント</h2><button class="btn btn-primary" type="button" onclick="syncLearningNow(this)">今すぐ同期</button>' + (signedInUser ? '<button class="btn btn-secondary" type="button" onclick="logout()">ログアウト</button>' : '<button class="btn btn-primary" type="button" onclick="login()">ログイン・新規登録へ</button>') + '</section>' + (signedInUser ? renderRoleAccessSettingsCard(user) : '');
   }
 
-  el.innerHTML = `<div class="account-greeting"><span class="account-greeting-kicker">MY PAGE</span><h1>${signedInUser ? `こんにちは、${escapeHtml(nickname)}さん` : 'ログインしよう'}</h1><p>${signedInUser ? '学習の設定やプロフィールをここで管理できます。' : 'ログインすると、学習記録を保存して続きから学べます。'}</p></div>${tabNav}<div class="account-tab-panel" role="region" aria-live="polite">${panel}</div>`;
+  const back = signedInUser && !['profile', 'settings'].includes(accountSettingsTab) ? '<a class="account-subpanel-back" href="#screen-account" onclick="event.preventDefault();setAccountSettingsTab(&quot;settings&quot;)">← 設定に戻る</a>' : '';
+  el.innerHTML = `<div class="account-greeting"><span class="account-greeting-kicker">MY PAGE</span><h1>${signedInUser ? `こんにちは、${escapeHtml(nickname)}さん` : 'ログインしよう'}</h1><p>${signedInUser ? '学習の設定やプロフィールをここで管理できます。' : 'ログインすると、学習記録を保存して続きから学べます。'}</p></div>${tabNav}<div class="account-tab-panel" role="region" aria-live="polite">${back}${panel}</div>`;
 
 }
 function renderSchoolSettingsMenu() {
@@ -2510,8 +2506,8 @@ function renderSchoolSettingsMenu() {
     + '<button class="btn btn-secondary" onclick="setAccountSettingsTab(&quot;access&quot;)">アカウント・同期</button>'
     + '<button class="btn btn-secondary" onclick="setAccountSettingsTab(&quot;help&quot;)">使い方</button>'
     + (teacher || admin ? '<a class="btn btn-secondary" href="./teacher.html">学校の学習状況</a>' : '')
-    + (admin ? '<a class="btn btn-primary" href="./admin.html">学校ロゴ・学校の詳細設定</a><a class="btn btn-secondary" href="./admin.html#admin-user-search">管理者設定・先生ロール</a>' : '')
-    + '</div></section>' + (admin ? renderSchoolCodeSettings().slice(renderSchoolCodeSettings().indexOf('<div class="account-card school-admin-card">')) : '');
+    + (admin ? '<a class="btn btn-primary" href="./admin.html">学校・管理者設定</a>' : '')
+    + '</div></section>' + (admin ? '<details class="school-settings-disclosure"><summary>学校ロゴ・参加コードを編集</summary>' + renderSchoolCodeSettings().slice(renderSchoolCodeSettings().indexOf('<div class="account-card school-admin-card">')) + '</details>' : '');
 }
 
 function loadProgress() {
